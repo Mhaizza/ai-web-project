@@ -1,51 +1,81 @@
 <!DOCTYPE HTML>
-<HTML LANG="TH" CLASS="BG-GRAY-900">
+<HTML LANG="EN">
 <HEAD>
     <META CHARSET="UTF-8">
     <META NAME="VIEWPORT" CONTENT="WIDTH=DEVICE-WIDTH, INITIAL-SCALE=1.0">
-    <TITLE>PORTFOLIO CYBERPUNK</TITLE>
+    <TITLE>CYBERPUNK MODERN UI</TITLE>
+    <LINK HREF="HTTPS://FONTS.GOOGLEAPIS.COM/CSS2?FAMILY=ORBITRON&DISPLAY=SWAP" REL="STYLESHEET">
     <LINK HREF="HTTPS://CDN.JSDELIVR.NET/NPM/TAILWINDCSS@2.2.19/DIST/TAILWIND.MIN.CSS" REL="STYLESHEET">
     <STYLE>
         BODY {
-            FONT-FAMILY: 'ROBOTO', SANS-SERIF;
-            COLOR: #E0E0E0;
+            BACKGROUND-COLOR: #1A1A1A;
+            COLOR: #FFF;
+            FONT-FAMILY: 'ORBITRON', SANS-SERIF;
         }
-        .BG-CYBERPUNK {
-            BACKGROUND: LINEAR-GRADIENT(135DEG, #0E0E0E 25%, #A700FF 50%, #00FF9C 75%);
-            FILTER: BLUR(10PX);
-            POSITION: ABSOLUTE;
-            WIDTH: 100%;
-            HEIGHT: 100%;
-            Z-INDEX: -1;
+        .GLASS {
+            BACKGROUND: RGBA(255, 255, 255, 0.1);
+            BORDER-RADIUS: 15PX;
+            BACKDROP-FILTER: BLUR(10PX);
+            BORDER: 1PX SOLID RGBA(255, 255, 255, 0.2);
         }
-        H1, H2, H3 {
-            TEXT-SHADOW: 2PX 2PX 4PX RGBA(0, 0, 0, 0.7);
+        .GLOW {
+            TEXT-SHADOW: 0 0 10PX RGBA(0, 255, 255, 0.7),
+                         0 0 20PX RGBA(0, 255, 255, 0.5);
+        }
+        .NEON-BUTTON {
+            BACKGROUND: LINEAR-GRADIENT(90DEG, RGBA(0, 204, 204, 1) 0%, RGBA(0, 51, 51, 1) 100%);
+            COLOR: WHITE;
+            PADDING: 10PX 20PX;
+            BORDER: NONE;
+            BORDER-RADIUS: 5PX;
+            CURSOR: POINTER;
+            BOX-SHADOW: 0 0 10PX RGBA(0, 204, 204, 1);
+            TRANSITION: ALL 0.3S EASE;
+        }
+        .NEON-BUTTON:HOVER {
+            BOX-SHADOW: 0 0 20PX RGBA(0, 204, 204, 1);
+            TRANSFORM: SCALE(1.05);
         }
     </STYLE>
 </HEAD>
-<BODY CLASS="BG-GRAY-900">
-    <DIV CLASS="BG-CYBERPUNK"></DIV>
-    <DIV CLASS="CONTAINER MX-AUTO P-5">
-        <HEADER CLASS="TEXT-CENTER PY-10">
-            <H1 CLASS="TEXT-5XL FONT-BOLD">PORTFOLIO CYBERPUNK</H1>
-            <P CLASS="MT-4 TEXT-LG">ยินดีต้อนรับสู่โลกแห่งเทคโนโลยีและนวัตกรรม</P>
-        </HEADER>
-        <SECTION CLASS="MY-10">
-            <H2 CLASS="TEXT-3XL FONT-SEMIBOLD MB-5">เกี่ยวกับฉัน</H2>
-            <P>ฉันคือ [ชื่อของคุณ] นักพัฒนาและนักออกแบบเว็บที่มีความหลงใหลในเทคโนโลยีและแนวคิดที่ทันสมัย</P>
-        </SECTION>
-        <SECTION CLASS="MY-10">
-            <H2 CLASS="TEXT-3XL FONT-SEMIBOLD MB-5">โครงการที่ทำ</H2>
-            <UL CLASS="LIST-DISC LIST-INSIDE">
-                <LI><A HREF="#" CLASS="TEXT-BLUE-400 HOVER:UNDERLINE">โครงการ 1</A>: คำอธิบายเกี่ยวกับโครงการ 1</LI>
-                <LI><A HREF="#" CLASS="TEXT-BLUE-400 HOVER:UNDERLINE">โครงการ 2</A>: คำอธิบายเกี่ยวกับโครงการ 2</LI>
-                <LI><A HREF="#" CLASS="TEXT-BLUE-400 HOVER:UNDERLINE">โครงการ 3</A>: คำอธิบายเกี่ยวกับโครงการ 3</LI>
-            </UL>
-        </SECTION>
-        <SECTION CLASS="MY-10">
-            <H2 CLASS="TEXT-3XL FONT-SEMIBOLD MB-5">ติดต่อ</H2>
-            <P>หากคุณสนใจสามารถติดต่อได้ที่ <A HREF="MAILTO:YOUREMAIL@EXAMPLE.COM" CLASS="TEXT-BLUE-400 HOVER:UNDERLINE">YOUREMAIL@EXAMPLE.COM</A></P>
-        </SECTION>
-    </DIV>
+<BODY>
+    <NAV CLASS="FLEX JUSTIFY-BETWEEN ITEMS-CENTER P-6 BG-TRANSPARENT">
+        <DIV CLASS="TEXT-2XL FONT-BOLD GLOW">CYBERPUNK UI</DIV>
+        <UL CLASS="FLEX SPACE-X-6 TEXT-LG">
+            <LI><A HREF="#HERO" CLASS="HOVER:TEXT-CYAN-400 TRANSITION-COLORS">HOME</A></LI>
+            <LI><A HREF="#PROJECTS" CLASS="HOVER:TEXT-CYAN-400 TRANSITION-COLORS">PROJECTS</A></LI>
+            <LI><A HREF="#CONTACT" CLASS="HOVER:TEXT-CYAN-400 TRANSITION-COLORS">CONTACT</A></LI>
+        </UL>
+    </NAV>
+
+    <SECTION ID="HERO" CLASS="FLEX ITEMS-CENTER JUSTIFY-CENTER H-SCREEN">
+        <DIV CLASS="TEXT-CENTER">
+            <H1 CLASS="TEXT-5XL GLOW">WELCOME TO THE CYBERPUNK WORLD</H1>
+            <P CLASS="MT-4 TEXT-XL">EXPLORE OUR PROJECTS AND INVENTIONS THAT EMBRACE THE FUTURE.</P>
+            <BUTTON CLASS="NEON-BUTTON MT-6">GET STARTED</BUTTON>
+        </DIV>
+    </SECTION>
+
+    <SECTION ID="PROJECTS" CLASS="FLEX FLEX-COL ITEMS-CENTER JUSTIFY-CENTER PY-20">
+        <H2 CLASS="TEXT-4XL GLOW MB-10">PROJECTS</H2>
+        <DIV CLASS="GRID GRID-COLS-1 SM:GRID-COLS-2 LG:GRID-COLS-3 GAP-6">
+            <DIV CLASS="GLASS P-6 ROUNDED-MD">
+                <H3 CLASS="TEXT-2XL GLOW">PROJECT 1</H3>
+                <P CLASS="TEXT-LG">DESCRIPTION OF PROJECT 1 GOES HERE.</P>
+            </DIV>
+            <DIV CLASS="GLASS P-6 ROUNDED-MD">
+                <H3 CLASS="TEXT-2XL GLOW">PROJECT 2</H3>
+                <P CLASS="TEXT-LG">DESCRIPTION OF PROJECT 2 GOES HERE.</P>
+            </DIV>
+            <DIV CLASS="GLASS P-6 ROUNDED-MD">
+                <H3 CLASS="TEXT-2XL GLOW">PROJECT 3</H3>
+                <P CLASS="TEXT-LG">DESCRIPTION OF PROJECT 3 GOES HERE.</P>
+            </DIV>
+        </DIV>
+    </SECTION>
+
+    <FOOTER CLASS="FLEX JUSTIFY-CENTER ITEMS-CENTER P-6 BG-TRANSPARENT">
+        <P CLASS="TEXT-CENTER TEXT-LG">© 2023 CYBERPUNK UI. ALL RIGHTS RESERVED.</P>
+    </FOOTER>
 </BODY>
 </HTML>
