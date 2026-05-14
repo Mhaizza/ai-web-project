@@ -1,129 +1,84 @@
-<!DOCTYPE HTML>
-<HTML LANG="EN">
-<HEAD>
-    <META CHARSET="UTF-8">
-    <META NAME="VIEWPORT" CONTENT="WIDTH=DEVICE-WIDTH, INITIAL-SCALE=1.0">
-    <TITLE>CYBERPUNK STARTUP LANDING PAGE</TITLE>
-    <LINK HREF="HTTPS://CDN.JSDELIVR.NET/NPM/TAILWINDCSS@2.2.19/DIST/TAILWIND.MIN.CSS" REL="STYLESHEET">
-    <STYLE>
-        BODY {
-            BACKGROUND: LINEAR-GRADIENT(135DEG, #1C1C1E, #2C2C2E);
-            BACKGROUND-SIZE: 400% 400%;
-            ANIMATION: GRADIENT 15S EASE INFINITE;
-            OVERFLOW: HIDDEN;
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+    <title>Premium Futuristic Startup UI</title>
+    <style>
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #0d0d20);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
         }
-        @KEYFRAMES GRADIENT {
-            0% { BACKGROUND-POSITION: 0% 50%; }
-            50% { BACKGROUND-POSITION: 100% 50%; }
-            100% { BACKGROUND-POSITION: 0% 50%; }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(255, 255, 255, 0.3);
         }
-        .GLASS {
-            BACKGROUND: RGBA(255, 255, 255, 0.1);
-            BACKDROP-FILTER: BLUR(15PX);
-            BORDER-RADIUS: 10PX;
-            BORDER: 1PX SOLID RGBA(255, 255, 255, 0.2);
+        .neon-button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 24px;
+            transition: all 0.3s ease-in-out;
         }
-        .NEON-BUTTON {
-            BACKGROUND-COLOR: #00FFCC;
-            BOX-SHADOW: 0 0 20PX #00FFCC, 0 0 30PX #00FFCC;
-            TRANSITION: ALL 0.3s;
+        .neon-button:hover {
+            background-color: #005bb5;
+            box-shadow: 0 0 20px #007aff, 0 0 30px #007aff, 0 0 40px #007aff;
+            transform: scale(1.05);
         }
-        .NEON-BUTTON:HOVER {
-            BACKGROUND-COLOR: #00CCAA;
-            BOX-SHADOW: 0 0 30PX #00FFCC;
-            COLOR: #000;
+        .glowing-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 122, 255, 0.5);
+            transition: all 0.3s ease;
         }
-    </STYLE>
-</HEAD>
-<BODY CLASS="FONT-SANS TEXT-WHITE OVERFLOW-HIDDEN">
-    <NAV CLASS="STICKY TOP-0 Z-50 BG-TRANSPARENT GLASS BACKDROP-FILTER BACKDROP-BLUR-LG P-4">
-        <DIV CLASS="CONTAINER MX-AUTO FLEX JUSTIFY-BETWEEN ITEMS-CENTER">
-            <A HREF="#" CLASS="TEXT-2XL FONT-BOLD">CYBERPUNK CO.</A>
-            <UL CLASS="FLEX SPACE-X-4">
-                <LI><A HREF="#FEATURES" CLASS="HOVER:TEXT-TEAL-500 TRANSITION DURATION-300">FEATURES</A></LI>
-                <LI><A HREF="#PRICING" CLASS="HOVER:TEXT-TEAL-500 TRANSITION DURATION-300">PRICING</A></LI>
-                <LI><A HREF="#TESTIMONIALS" CLASS="HOVER:TEXT-TEAL-500 TRANSITION DURATION-300">TESTIMONIALS</A></LI>
-                <LI><A HREF="#CONTACT" CLASS="HOVER:TEXT-TEAL-500 TRANSITION DURATION-300">CONTACT</A></LI>
-            </UL>
-        </DIV>
-    </NAV>
-    <HEADER CLASS="HERO MIN-H-SCREEN FLEX ITEMS-CENTER JUSTIFY-CENTER RELATIVE OVERFLOW-HIDDEN">
-        <DIV CLASS="ABSOLUTE INSET-0">
-            <DIV CLASS="PARTICLES-JS"></DIV>
-        </DIV>
-        <DIV CLASS="GLASS TEXT-CENTER P-10 Z-10">
-            <H1 CLASS="TEXT-5XL FONT-BOLD MB-4">WELCOME TO THE FUTURE</H1>
-            <P CLASS="MB-8">TRANSFORM YOUR BUSINESS WITH OUR INNOVATIVE SOLUTIONS.</P>
-            <A HREF="#FEATURES" CLASS="NEON-BUTTON TEXT-LG FONT-BOLD PY-3 PX-6 ROUNDED-LG">GET STARTED</A>
-        </DIV>
-    </HEADER>
-    <SECTION ID="FEATURES" CLASS="PY-20 BG-GRADIENT-TO-B FROM-GRAY-900 TO-GRAY-800">
-        <DIV CLASS="CONTAINER MX-AUTO TEXT-CENTER">
-            <H2 CLASS="TEXT-4XL FONT-BOLD MB-10">OUR FEATURES</H2>
-            <DIV CLASS="GRID GRID-COLS-1 MD:GRID-COLS-3 GAP-6">
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">FEATURE 1</H3>
-                    <P CLASS="MT-2">DESCRIPTION OF FEATURE 1 GOES HERE. UNIQUE SELLING POINT.</P>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">FEATURE 2</H3>
-                    <P CLASS="MT-2">DESCRIPTION OF FEATURE 2 GOES HERE. UNIQUE SELLING POINT.</P>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">FEATURE 3</H3>
-                    <P CLASS="MT-2">DESCRIPTION OF FEATURE 3 GOES HERE. UNIQUE SELLING POINT.</P>
-                </DIV>
-            </DIV>
-        </DIV>
-    </SECTION>
-    <SECTION ID="PRICING" CLASS="PY-20 BG-GRAY-900">
-        <DIV CLASS="CONTAINER MX-AUTO TEXT-CENTER">
-            <H2 CLASS="TEXT-4XL FONT-BOLD MB-10">PRICING PLANS</H2>
-            <DIV CLASS="GRID GRID-COLS-1 MD:GRID-COLS-3 GAP-6">
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">BASIC</H3>
-                    <P CLASS="MT-2">$19/MONTH</P>
-                    <A HREF="#" CLASS="NEON-BUTTON MT-4 INLINE-BLOCK">CHOOSE PLAN</A>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">PRO</H3>
-                    <P CLASS="MT-2">$49/MONTH</P>
-                    <A HREF="#" CLASS="NEON-BUTTON MT-4 INLINE-BLOCK">CHOOSE PLAN</A>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <H3 CLASS="TEXT-XL FONT-SEMIBOLD">ENTERPRISE</H3>
-                    <P CLASS="MT-2">$99/MONTH</P>
-                    <A HREF="#" CLASS="NEON-BUTTON MT-4 INLINE-BLOCK">CHOOSE PLAN</A>
-                </DIV>
-            </DIV>
-        </DIV>
-    </SECTION>
-    <SECTION ID="TESTIMONIALS" CLASS="PY-20 BG-GRADIENT-TO-B FROM-GRAY-800 TO-GRAY-900">
-        <DIV CLASS="CONTAINER MX-AUTO TEXT-CENTER">
-            <H2 CLASS="TEXT-4XL FONT-BOLD MB-10">WHAT OUR CLIENTS SAY</H2>
-            <DIV CLASS="GRID GRID-COLS-1 MD:GRID-COLS-2 LG:GRID-COLS-3 GAP-6">
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <P CLASS="ITALIC">"THIS SERVICE CHANGED MY LIFE! HIGHLY RECOMMENDED."</P>
-                    <H4 CLASS="MT-4 FONT-SEMIBOLD">- CLIENT A</H4>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <P CLASS="ITALIC">"EXCEPTIONAL SUPPORT AND GREAT FEATURES!"</P>
-                    <H4 CLASS="MT-4 FONT-SEMIBOLD">- CLIENT B</H4>
-                </DIV>
-                <DIV CLASS="GLASS P-6 HOVER:SHADOW-2XL TRANSITION DURATION-300">
-                    <P CLASS="ITALIC">"THE BEST INVESTMENT I'VE MADE FOR MY BUSINESS!"</P>
-                    <H4 CLASS="MT-4 FONT-SEMIBOLD">- CLIENT C</H4>
-                </DIV>
-            </DIV>
-        </DIV>
-    </SECTION>
-    <FOOTER CLASS="PY-10 BG-GRAY-900 TEXT-CENTER">
-        <P>&COPY; 2023 CYBERPUNK CO. ALL RIGHTS RESERVED.</P>
-    </FOOTER>
-    <SCRIPT>
-        PARTICLESJS.LOAD('PARTICLES-JS', 'PARTICLES.JSON', FUNCTION() {
-            CONSOLE.LOG('CALLBACK - PARTICLES.JS CONFIG LOADED');
-        });
-    </SCRIPT>
-</BODY>
-</HTML>
+        .glowing-card:hover {
+            box-shadow: 0 0 50px rgba(0, 122, 255, 1);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <nav class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center glass">
+        <div class="text-xl font-bold">AI Startup</div>
+        <ul class="flex space-x-6">
+            <li><a href="#" class="text-white hover:text-gray-300">หน้าแรก</a></li>
+            <li><a href="#" class="text-white hover:text-gray-300">บริการ</a></li>
+            <li><a href="#" class="text-white hover:text-gray-300">เกี่ยวกับเรา</a></li>
+            <li><a href="#" class="neon-button">ติดต่อเรา</a></li>
+        </ul>
+    </nav>
+    <section class="flex items-center justify-center min-h-screen">
+        <div class="text-center">
+            <h1 class="text-6xl font-bold mb-4 animate-fade-in">กำหนดอนาคตด้วย AI</h1>
+            <p class="text-lg mb-8">ยินดีต้อนรับสู่นวัตกรรมที่ทันสมัยที่สุด</p>
+            <a href="#" class="neon-button">เริ่มต้นใช้งานฟรี</a>
+        </div>
+    </section>
+    <div class="container mx-auto p-10">
+        <h2 class="text-4xl font-bold text-center mb-10">คุณสมบัติของเรา</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <div class="glowing-card p-6">
+                <h3 class="text-2xl font-bold mb-2">โซลูชัน AI ที่ปรับเฉพาะ</h3>
+                <p>มอบโซลูชันที่เหมาะสมสำหรับทุกธุรกิจ</p>
+            </div>
+            <div class="glowing-card p-6">
+                <h3 class="text-2xl font-bold mb-2">การวิเคราะห์ข้อมูลอัจฉริยะ</h3>
+                <p>เราทำให้การวิเคราะห์เป็นเรื่องง่ายและรวดเร็ว</p>
+            </div>
+            <div class="glowing-card p-6">
+                <h3 class="text-2xl font-bold mb-2">ความปลอดภัยและความเป็นส่วนตัว</h3>
+                <p>รักษาข้อมูลของคุณให้ปลอดภัยที่สุด</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
