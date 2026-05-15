@@ -339,3 +339,52 @@ body {
 .hover-lift:active {
   transform: translateY(0) scale(0.98);
 }
+
+/* ── Terminal textarea (AI evaluator input) ─────────────────── */
+.terminal-textarea {
+  background: rgba(0, 8, 4, 0.92);
+  border: 1px solid rgba(0, 245, 255, 0.28);
+  border-radius: 12px;
+  color: #00f5ff;
+  font-family: var(--font-mono), 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  padding: 14px 16px;
+  resize: none;
+  width: 100%;
+  caret-color: #00f5ff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.terminal-textarea::placeholder {
+  color: rgba(0, 245, 255, 0.25);
+}
+
+.terminal-textarea:focus {
+  border-color: rgba(0, 245, 255, 0.6);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.18), inset 0 0 12px rgba(0, 245, 255, 0.04);
+}
+
+/* ── Eval bar fill animation ────────────────────────────────── */
+.eval-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Score tier glow ────────────────────────────────────────── */
+.tier-s { color: #fde047; filter: drop-shadow(0 0 12px #fde047); }
+.tier-a { color: #00f5ff; filter: drop-shadow(0 0 12px #00f5ff); }
+.tier-b { color: #4ade80; filter: drop-shadow(0 0 10px #4ade80); }
+.tier-c { color: #fb923c; filter: drop-shadow(0 0 10px #fb923c); }
+.tier-d { color: #f87171; filter: drop-shadow(0 0 8px #f87171);  }
+
+/* ── Evaluating step animation ──────────────────────────────── */
+@keyframes evalStepIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.eval-step {
+  animation: evalStepIn 0.3s ease-out forwards;
+}
