@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "BOSS";
 
@@ -13,6 +14,7 @@ interface Mission {
   locked: boolean;
   completed: boolean;
   icon: string;
+  href?: string;
 }
 
 const MISSIONS: Mission[] = [
@@ -28,6 +30,7 @@ const MISSIONS: Mission[] = [
     locked: false,
     completed: true,
     icon: "🧠",
+    href: "/missions/what-is-ai",
   },
   {
     id: "m2",
@@ -41,6 +44,7 @@ const MISSIONS: Mission[] = [
     locked: false,
     completed: false,
     icon: "⚙️",
+    href: "/missions/ml-101",
   },
   {
     id: "m3",
@@ -53,18 +57,20 @@ const MISSIONS: Mission[] = [
     locked: false,
     completed: false,
     icon: "🔗",
+    href: "/missions/neural-network",
   },
   {
     id: "m4",
     code: "M-004",
-    title: "Prompt Engineering",
-    description: "เชี่ยวชาญศิลปะการเขียน prompt เพื่อควบคุม AI Language Models",
+    title: "Social AI Agent",
+    description: "เขียน prompt ให้ AI สร้างโพสต์โซเชียลมีเดีย — ภารกิจแรกที่เล่นได้!",
     xp: 500,
     difficulty: "MEDIUM",
-    tags: ["LLM", "PROMPTS"],
+    tags: ["LLM", "PROMPTS", "PLAYABLE"],
     locked: false,
     completed: false,
     icon: "✍️",
+    href: "/missions/social-post",
   },
   {
     id: "m5",
@@ -215,12 +221,31 @@ function MissionCard({ mission }: { mission: Mission }) {
               </span>
             </div>
             {!mission.locked && !mission.completed && (
-              <button
-                className="text-xs px-3 py-1.5 rounded border border-cyan-500/40 text-cyan-400 hover:bg-cyan-400/10 transition-colors tracking-widest"
+              mission.href ? (
+                <Link
+                  href={mission.href}
+                  className="text-xs px-3 py-1.5 rounded border border-pink-500/50 text-pink-400 hover:bg-pink-400/10 transition-colors tracking-widest inline-block"
+                  style={{ fontFamily: "var(--font-orbitron)" }}
+                >
+                  ▶ START →
+                </Link>
+              ) : (
+                <button
+                  className="text-xs px-3 py-1.5 rounded border border-cyan-500/40 text-cyan-400 hover:bg-cyan-400/10 transition-colors tracking-widest"
+                  style={{ fontFamily: "var(--font-orbitron)" }}
+                >
+                  START →
+                </button>
+              )
+            )}
+            {mission.completed && mission.href && (
+              <Link
+                href={mission.href}
+                className="text-xs px-3 py-1.5 rounded border border-green-500/30 text-green-400 hover:bg-green-400/10 transition-colors tracking-widest inline-block"
                 style={{ fontFamily: "var(--font-orbitron)" }}
               >
-                START →
-              </button>
+                🔄 REPLAY
+              </Link>
             )}
           </div>
         </div>
