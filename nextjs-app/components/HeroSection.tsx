@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const TYPING_TEXTS = [
   "LEARN AI THROUGH COMBAT",
@@ -14,15 +14,6 @@ export default function HeroSection() {
   const [textIndex, setTextIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Only cancel the pause timeout on unmount — it must survive re-renders
-  // triggered by setCharIndex so the 1800ms delay can actually fire.
-  useEffect(() => {
-    return () => {
-      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     const current = TYPING_TEXTS[textIndex];
@@ -32,7 +23,7 @@ export default function HeroSection() {
           setDisplayText(current.slice(0, charIndex + 1));
           setCharIndex((c) => c + 1);
           if (charIndex + 1 === current.length) {
-            pauseTimeoutRef.current = setTimeout(() => setIsDeleting(true), 1800);
+            setTimeout(() => setIsDeleting(true), 1800);
           }
         } else {
           setDisplayText(current.slice(0, charIndex - 1));
