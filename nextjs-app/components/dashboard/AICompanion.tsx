@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const COMPANION_MESSAGES = [
   "สวัสดี AGENT_001! วันนี้พร้อมเรียนรู้แล้วใช่ไหม? 🚀",
@@ -30,10 +30,19 @@ export default function AICompanion() {
   const [msgIdx, setMsgIdx] = useState(0);
   const [moodIdx, setMoodIdx] = useState(0);
   const [typing, setTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
   const nextMessage = () => {
+    if (typing) return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     setTyping(true);
-    setTimeout(() => {
+    typingTimeoutRef.current = setTimeout(() => {
       setMsgIdx((i) => (i + 1) % COMPANION_MESSAGES.length);
       setMoodIdx((i) => (i + 1) % COMPANION_MOODS.length);
       setTyping(false);
