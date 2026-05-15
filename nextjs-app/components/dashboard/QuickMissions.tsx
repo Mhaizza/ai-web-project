@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type MissionStatus = "available" | "in_progress" | "locked" | "completed";
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "BOSS";
@@ -17,6 +18,7 @@ interface Mission {
   icon: string;
   world: string;
   progress?: number;
+  href?: string;
 }
 
 const MISSIONS: Mission[] = [
@@ -31,6 +33,7 @@ const MISSIONS: Mission[] = [
     status: "completed",
     icon: "🧠",
     world: "WORLD 1",
+    href: "/missions/what-is-ai",
   },
   {
     id: "m2",
@@ -44,6 +47,7 @@ const MISSIONS: Mission[] = [
     icon: "⚙️",
     world: "WORLD 1",
     progress: 60,
+    href: "/missions/ml-101",
   },
   {
     id: "m3",
@@ -56,18 +60,20 @@ const MISSIONS: Mission[] = [
     status: "available",
     icon: "🔗",
     world: "WORLD 1",
+    href: "/missions/neural-network",
   },
   {
     id: "m4",
     code: "M-004",
-    title: "Prompt Engineering",
-    description: "เชี่ยวชาญการเขียน prompt สำหรับ AI",
+    title: "Social AI Agent",
+    description: "เขียน prompt ให้ AI สร้างโพสต์โซเชียลมีเดีย",
     xp: 500,
     energy: 2,
     difficulty: "MEDIUM",
-    status: "locked",
+    status: "available",
     icon: "✍️",
-    world: "WORLD 2",
+    world: "WORLD 1",
+    href: "/missions/social-post",
   },
   {
     id: "m5",
@@ -160,12 +166,22 @@ function MissionRow({ mission }: { mission: Mission }) {
           {status.label}
         </span>
         {!isLocked && !isCompleted && (
-          <button
-            className="text-xs px-3 py-1 rounded border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors tracking-widest mt-0.5"
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            {mission.status === "in_progress" ? "CONTINUE" : "START"} →
-          </button>
+          mission.href ? (
+            <Link
+              href={mission.href}
+              className="text-xs px-3 py-1 rounded border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors tracking-widest mt-0.5 inline-block"
+              style={{ fontFamily: "var(--font-orbitron)" }}
+            >
+              {mission.status === "in_progress" ? "CONTINUE" : "START"} →
+            </Link>
+          ) : (
+            <button
+              className="text-xs px-3 py-1 rounded border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors tracking-widest mt-0.5"
+              style={{ fontFamily: "var(--font-orbitron)" }}
+            >
+              {mission.status === "in_progress" ? "CONTINUE" : "START"} →
+            </button>
+          )
         )}
         {isCompleted && (
           <span className="text-green-400 text-sm">✅</span>
