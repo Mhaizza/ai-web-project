@@ -1,938 +1,503 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import {
-  playSound,
-  useTypewriter,
-  useCountUp,
-  XPFloaters,
-  ScreenFlash,
-  CORRECT_LINES,
-  WRONG_LINES,
-  type Floater,
-} from "@/lib/game-utils";
 
-type Phase = "briefing" | "quiz" | "result" | "complete";
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Phase = "briefing" | "challenge" | "result" | "complete";
+type ChallengeState = "input" | "evaluating" | "scored";
+type Tier = "S" | "A" | "B" | "C" | "D";
 
-const MISSION = {
-  code: "M-003",
-  title: "NEURAL NETWORK BASICS",
-  icon: "🔗",
-  xp: 350,
-  credits: 60,
-  difficulty: "MEDIUM",
-  color: "#c084fc",
-};
+const MISSION = { code: "M-003", title: "NEURAL NETWORK BASICS", icon: "🔗", xpPerChallenge: 87, credits: 60, difficulty: "MEDIUM" };
 
 const NPC_DIALOGUE = [
-  {
-    speaker: "NEXUS",
-    mood: "🤖",
-    text: "ยอดเยี่ยม AGENT_001! คุณผ่าน ML 101 มาแล้ว — ตอนนี้ถึงเวลาสำรวจ Neural Network โครงสร้างสมองของ AI!",
-    sub: "LEVEL UP DETECTED",
-  },
-  {
-    speaker: "NOVA-9",
-    mood: "🧬",
-    text: "สวัสดี! ฉัน NOVA-9 — AI ที่สร้างจาก Neural Network นั่นแหละ! วันนี้ฉันจะพาคุณเข้าไปดูว่าข้างในฉันมีอะไรบ้าง",
-    sub: "AI INTRODUCING ITSELF",
-  },
-  {
-    speaker: "NEXUS",
-    mood: "🤖",
-    text: "4 คำถามสุดท้ายก่อนที่คุณจะได้พบกับ Social AI Agent — ภารกิจที่เล่นได้จริง! พร้อมหรือยัง?",
-    sub: "FINAL QUIZ LOADING",
-  },
+  { speaker: "NEXUS", mood: "🤖", text: "ยอดเยี่ยม AGENT_001! คุณเข้าใจ ML แล้ว — ตอนนี้ถึงเวลาสำรวจ Neural Network โครงสร้างสมองของ AI!", sub: "LEVEL_UP DETECTED" },
+  { speaker: "NOVA-9", mood: "🧬", text: "สวัสดี! ฉันชื่อ NOVA-9 ฉันเป็น AI ที่สร้างจาก Neural Network จริงๆ วันนี้ฉันจะพาคุณเข้าไปดูว่าข้างในสมองของฉันมีอะไรบ้าง!", sub: "NEURAL_CORE EXPOSED" },
+  { speaker: "NOVA-9", mood: "🧬", text: "3 ความท้าทายรออยู่ — แต่ละข้อมีสองส่วน: เปรียบด้วยชีวิตจริง และอธิบายเทคนิค AI จะประเมิน 4 มิติและให้ feedback ทันที!", sub: "DUAL_ANALYSIS_MODE READY" },
 ];
 
-interface Question {
-  id: number;
-  question: string;
-  options: string[];
-  correct: number;
-  explanation: string;
-  icon: string;
+interface DualChallenge {
+  id: number; concept: string; icon: string;
+  part1: { prompt: string; placeholder: string; minChars: number; keywords: string[] };
+  part2: { prompt: string; placeholder: string; minChars: number; keywords: string[] };
+  feedbacks: Record<Tier, string>;
 }
 
-const QUESTIONS: Question[] = [
+const CHALLENGES: DualChallenge[] = [
   {
-    id: 1,
-    question: "Neuron ใน Neural Network ทำหน้าที่อะไร?",
-    icon: "🔗",
-    options: [
-      "เก็บข้อมูลถาวรเหมือน hard drive",
-      "รับ input, ประมวลผล, และส่งต่อ signal ไปยัง neuron ถัดไป",
-      "แสดงผลลัพธ์บนหน้าจอ",
-      "เชื่อมต่ออินเทอร์เน็ต",
-    ],
-    correct: 1,
-    explanation:
-      "Neuron รับข้อมูล → คูณน้ำหนัก (weight) → บวกรวม → ผ่าน activation function → ส่งต่อ นี่คือแรงบันดาลใจจากเซลล์ประสาทของมนุษย์!",
+    id: 1, concept: "Neuron และ Neural Network", icon: "🔗",
+    part1: {
+      prompt: "เปรียบ Neuron ใน Neural Network กับอะไรในชีวิตจริงที่รับสัญญาณและส่งต่อข้อมูล",
+      placeholder: "เช่น: 'Neuron เหมือนพนักงานในออฟฟิศ ที่รับงานจากเพื่อนหลายคน (input) รวบรวมข้อมูลทั้งหมด ถ้ามีมากพอก็ส่งงานต่อให้คนถัดไป (output) — Neural Network คือออฟฟิศทั้งหมดที่มีพนักงานทำงานเป็นชั้นๆ...'",
+      minChars: 35,
+      keywords: ["เหมือน", "เปรียบ", "เช่น", "รับ", "ส่ง", "สัญญาณ", "ข้อมูล", "ต่อ", "ชั้น", "layer", "คน", "พนักงาน", "เซลล์", "ร่างกาย", "เส้นประสาท", "โรงงาน", "ระบบ", "สาย", "ไฟฟ้า"],
+    },
+    part2: {
+      prompt: "อธิบายโครงสร้าง Neural Network ทางเทคนิค — Neuron ทำงานอย่างไร และ layers มีกี่ประเภท",
+      placeholder: "เช่น: 'Neural Network ประกอบด้วย neurons ที่เชื่อมกันด้วย weights แต่ละ neuron รับ inputs คูณด้วย weights บวกรวมกัน แล้วผ่าน activation function เพื่อส่งออก output ผ่าน input layer, hidden layers, จนถึง output layer...'",
+      minChars: 30,
+      keywords: ["neuron", "weight", "layer", "input", "output", "hidden", "activation", "function", "bias", "network", "node", "connection", "deep", "shallow", "perceptron", "forward", "propagation", "matrix"],
+    },
+    feedbacks: {
+      S: "ยอดเยี่ยม! Analogy ของคุณทำให้ Neural Network เข้าใจง่ายมาก และอธิบาย architecture ทางเทคนิคได้ถูกต้องครบถ้วน 🔥",
+      A: "ดีมาก! ตัวอย่างชัดเจน และเข้าใจ weights, layers, activation function ได้ถูกต้อง ⭐",
+      B: "ดี! ลองเพิ่มรายละเอียด เช่น weights, activation function และบอกว่า hidden layers ทำงานอย่างไร 💪",
+      C: "เข้าใจแนวคิดพื้นฐาน ลองอธิบายว่า Neuron 'ตัดสินใจ' ว่าจะส่งสัญญาณออกหรือไม่ได้อย่างไร 🔧",
+      D: "เริ่มต้นดี! ลองนึกถึง Neuron ว่ามันรับข้อมูลหลายทาง แล้วรวมกันแล้วตัดสินใจ — เหมือนสมองเลือกว่าจะทำอะไร 📚",
+    },
   },
   {
-    id: 2,
-    question: "Deep Learning ต่างจาก Machine Learning ทั่วไปอย่างไร?",
-    icon: "🏗️",
-    options: [
-      "Deep Learning เร็วกว่าเสมอ",
-      "Deep Learning ใช้ Neural Network หลายชั้น (hidden layers) มาก",
-      "Deep Learning ไม่ต้องใช้ข้อมูลเลย",
-      "Deep Learning ใช้ได้เฉพาะกับรูปภาพ",
-    ],
-    correct: 1,
-    explanation:
-      "Deep ใน Deep Learning หมายถึง hidden layers หลายชั้น ยิ่งลึกยิ่งเรียนรู้ feature ซับซ้อนได้มากขึ้น",
+    id: 2, concept: "Activation Function และ Deep Learning", icon: "⚡",
+    part1: {
+      prompt: "อธิบาย Activation Function โดยเปรียบกับการตัดสินใจในชีวิตจริง — มันช่วยให้ AI ทำอะไรได้บ้าง",
+      placeholder: "เช่น: 'Activation Function เหมือนประตูเปิด-ปิดที่บ้าน ถ้าสัญญาณเสียงดังถึงระดับหนึ่งประตูถึงจะเปิด — ใน AI ถ้า neuron รับสัญญาณมากพอ (ถึง threshold) มันจะ fire ส่งข้อมูลต่อ ถ้าน้อยเกินก็ไม่ส่ง...'",
+      minChars: 30,
+      keywords: ["เหมือน", "เปรียบ", "เช่น", "ตัดสินใจ", "เปิด", "ปิด", "ระดับ", "ถึง", "ไม่ถึง", "threshold", "กรอง", "กั้น", "ผ่าน", "ไม่ผ่าน", "สวิตช์", "วาล์ว", "ประตู", "เลือก", "กระแส"],
+    },
+    part2: {
+      prompt: "อธิบาย Activation Function ทางเทคนิค (เช่น ReLU, Sigmoid) และอธิบายว่าทำไม Deep Learning ถึงต้องใช้หลาย layers",
+      placeholder: "เช่น: 'Activation function เช่น ReLU (Rectified Linear Unit) ทำให้ network เรียนรู้ความสัมพันธ์ non-linear ได้ Deep Learning ใช้ hidden layers หลายชั้นเพราะแต่ละชั้น abstract features ที่ซับซ้อนขึ้นเรื่อยๆ...'",
+      minChars: 28,
+      keywords: ["activation", "relu", "sigmoid", "tanh", "function", "non-linear", "deep learning", "layer", "hidden", "feature", "abstract", "complexity", "backpropagation", "gradient", "vanishing", "softmax", "threshold"],
+    },
+    feedbacks: {
+      S: "ยอดมาก! อธิบาย Activation Function ด้วยตัวอย่างที่สร้างสรรค์และถูกต้องทางเทคนิคสมบูรณ์แบบ! 🏆",
+      A: "ดีมาก! ตัวอย่างชัดเจน และรู้จัก ReLU/Sigmoid ได้ถูกต้อง ลองอธิบายว่าทำไม non-linearity ถึงสำคัญ ⭐",
+      B: "ดี! แต่ลองเพิ่ม function name เช่น ReLU, Sigmoid และอธิบายว่า Deep Learning แต่ละ layer ทำหน้าที่อะไร 💪",
+      C: "เข้าใจว่า Activation Function ตัดสินใจเปิด/ปิด ลองเพิ่มว่ามันช่วยให้ AI เรียนรู้อะไรที่ซับซ้อนได้ 🔧",
+      D: "ลองนึกถึง Activation Function ว่าเหมือนสวิตช์ไฟ — ถ้าสัญญาณพอก็เปิด ถ้าน้อยเกินก็ปิด แล้วอธิบายด้วยคำพูดของคุณ 📚",
+    },
   },
   {
-    id: 3,
-    question: "Activation Function ในชั้น Neuron คืออะไร?",
-    icon: "⚡",
-    options: [
-      "ฟังก์ชันเปิด-ปิดคอมพิวเตอร์",
-      "ฟังก์ชันที่กำหนดว่า neuron จะส่งสัญญาณ output ออกไปหรือไม่ และมากแค่ไหน",
-      "การเชื่อมต่อ WiFi",
-      "ระบบ login ของ AI",
-    ],
-    correct: 1,
-    explanation:
-      "Activation function เช่น ReLU หรือ Sigmoid ช่วยให้ Neural Network เรียนรู้ความสัมพันธ์ที่ซับซ้อน (non-linear) ได้",
-  },
-  {
-    id: 4,
-    question: "CNN (Convolutional Neural Network) เหมาะกับงานประเภทใดที่สุด?",
-    icon: "🖼️",
-    options: [
-      "แปลภาษา",
-      "ทำนายราคาหุ้น",
-      "จดจำและวิเคราะห์รูปภาพ",
-      "สร้างดนตรี",
-    ],
-    correct: 2,
-    explanation:
-      "CNN ออกแบบมาพิเศษสำหรับข้อมูลแบบ grid เช่น รูปภาพ โดยใช้ convolution layer ตรวจหา pattern เช่น ขอบ รูปร่าง และ texture",
+    id: 3, concept: "Training Process และ Backpropagation", icon: "🔄",
+    part1: {
+      prompt: "เปรียบกระบวนการฝึก Neural Network (Training) กับการฝึกทักษะบางอย่างในชีวิตจริง",
+      placeholder: "เช่น: 'Training Neural Network เหมือนนักกีฬายิงธนูฝึกซ้อม ครั้งแรกยิงพลาด ครูบอกว่าพลาดไปซ้าย 10 cm (error) นักกีฬาปรับมุมยิงเล็กน้อย ทำซ้ำหลายร้อยครั้งจนยิงถูกเป้าสม่ำเสมอ...'",
+      minChars: 35,
+      keywords: ["เหมือน", "เปรียบ", "เช่น", "ฝึก", "ซ้อม", "ผิด", "ถูก", "ปรับ", "แก้", "ลองซ้ำ", "ซ้ำ", "error", "ครู", "feedback", "ดีขึ้น", "นักกีฬา", "ดนตรี", "สอน", "ตรวจสอบ", "คะแนน"],
+    },
+    part2: {
+      prompt: "อธิบาย Backpropagation และ Gradient Descent ทางเทคนิค — มันทำงานอย่างไรในการฝึก Neural Network",
+      placeholder: "เช่น: 'Backpropagation คือการคำนวณ gradient ของ loss function เทียบกับแต่ละ weight โดยใช้ chain rule จาก output layer ย้อนกลับไป input layer จากนั้น Gradient Descent อัพเดท weights ให้ลด loss...'",
+      minChars: 28,
+      keywords: ["backpropagation", "gradient", "descent", "loss", "error", "weight", "update", "epoch", "learning rate", "optimization", "chain rule", "partial derivative", "minimize", "converge", "batch", "stochastic", "adam", "momentum"],
+    },
+    feedbacks: {
+      S: "ยอดเยี่ยม! Analogy เรื่อง Training ของคุณสมจริงมาก และอธิบาย Backpropagation + Gradient Descent ได้ถูกต้องสมบูรณ์ 🚀",
+      A: "ดีมาก! เข้าใจ Training process และรู้จักคำศัพท์สำคัญ ลองอธิบาย Learning Rate และผลกระทบของมันเพิ่ม ⭐",
+      B: "ดี! เข้าใจหลักการ ลองเพิ่ม keyword เช่น gradient, loss function, learning rate เพื่อให้ครบถ้วน 💪",
+      C: "เข้าใจว่า Training คือการปรับ weights ซ้ำๆ ลองอธิบายว่า Backpropagation ช่วยให้รู้ว่าต้องปรับ weight ไหนอย่างไร 🔧",
+      D: "ลองคิดว่า Training เหมือนการแก้ข้อสอบ — ถ้าตอบผิด (loss สูง) ก็ต้องปรับวิธีคิด (weights) แล้วลองใหม่จนถูก 📚",
+    },
   },
 ];
 
-// ─── NPC Dialogue box ────────────────────────────────────────────────────────
-function DialogueBox({
-  dialogue,
-  onNext,
-  index,
-  total,
-}: {
-  dialogue: (typeof NPC_DIALOGUE)[0];
-  onNext: () => void;
-  index: number;
-  total: number;
-}) {
-  const { displayed, done, skip } = useTypewriter(dialogue.text, 22);
+interface ScoreResult {
+  creativity: number; technical: number; clarity: number; teaching: number;
+  total: number; tier: Tier; xpEarned: number; feedback: string;
+}
 
-  function handleBoxClick() {
-    if (!done) skip();
-    else onNext();
+function evaluateDual(p1: string, p2: string, ch: DualChallenge, baseXP: number): ScoreResult {
+  const t1 = p1.toLowerCase();
+  const t2 = p2.toLowerCase();
+  const teachWords = ["เช่น", "เหมือน", "เปรียบ", "คือ", "ทำให้", "เพราะ", "ตัวอย่าง", "นั่นคือ", "กล่าวคือ", "หมายความ"];
+
+  const cHits = ch.part1.keywords.filter(k => t1.includes(k)).length;
+  const creativity = Math.min(100, 20 + cHits * 13 + Math.min(28, Math.floor(p1.length / 4)));
+
+  const tHits = ch.part2.keywords.filter(k => t2.includes(k)).length;
+  const technical = Math.min(100, 15 + tHits * 16 + Math.min(24, Math.floor(p2.length / 5)));
+
+  const totalLen = p1.length + p2.length;
+  const clarity = Math.min(100, 15 + Math.min(38, Math.floor(totalLen / 6))
+    + (p1.length >= 35 ? 12 : 0) + (p2.length >= 28 ? 12 : 0)
+    + (p1.length >= 70 ? 8 : 0) + (p2.length >= 60 ? 8 : 0));
+
+  const tvHits = teachWords.filter(k => (t1 + " " + t2).includes(k)).length;
+  const teaching = Math.min(100, 20 + tvHits * 11 + (p1.length > 40 && p2.length > 35 ? 18 : 6)
+    + Math.min(18, Math.floor(totalLen / 10)));
+
+  const total = Math.round((creativity + technical + clarity + teaching) / 4);
+  const tier: Tier = total >= 88 ? "S" : total >= 73 ? "A" : total >= 55 ? "B" : total >= 35 ? "C" : "D";
+  const mult = { S: 1.0, A: 0.85, B: 0.65, C: 0.45, D: 0.25 }[tier];
+  return { creativity, technical, clarity, teaching, total, tier, xpEarned: Math.round(baseXP * mult), feedback: ch.feedbacks[tier] };
+}
+
+const TIER_CFG: Record<Tier, { color: string; label: string }> = {
+  S: { color: "#fde047", label: "LEGENDARY" }, A: { color: "#00f5ff", label: "EXPERT" },
+  B: { color: "#4ade80", label: "ADVANCED" }, C: { color: "#fb923c", label: "LEARNER" },
+  D: { color: "#f87171", label: "NOVICE" },
+};
+
+const SCORE_BARS = [
+  { key: "creativity" as const, label: "CREATIVITY",         color: "#f472b6", icon: "✦" },
+  { key: "technical"  as const, label: "TECHNICAL ACCURACY", color: "#00f5ff", icon: "◈" },
+  { key: "clarity"    as const, label: "CLARITY",            color: "#4ade80", icon: "◉" },
+  { key: "teaching"   as const, label: "TEACHING SKILL",     color: "#fde047", icon: "★" },
+];
+
+function useTypewriter(text: string, speed = 26) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setDisplayed(""); setDone(false);
+    let i = 0;
+    const iv = setInterval(() => { i++; setDisplayed(text.slice(0, i)); if (i >= text.length) { clearInterval(iv); setDone(true); } }, speed);
+    return () => clearInterval(iv);
+  }, [text, speed]);
+  return { displayed, done };
+}
+
+function DialogueBox({ d, onNext, idx, total }: { d: (typeof NPC_DIALOGUE)[0]; onNext: () => void; idx: number; total: number }) {
+  const { displayed, done } = useTypewriter(d.text);
+  const isNova = d.speaker === "NOVA-9";
+  const accent = isNova ? "#bf00ff" : "#00f5ff";
+  return (
+    <div className="flex flex-col items-center gap-5 w-full max-w-lg mx-auto">
+      <div className="relative">
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ animation: "float 4s ease-in-out infinite", background: isNova ? "linear-gradient(135deg,rgba(191,0,255,0.2),rgba(255,0,128,0.12))" : "linear-gradient(135deg,rgba(0,245,255,0.12),rgba(191,0,255,0.1))", border: `2px solid ${accent}60` }}>
+          {d.mood}
+        </div>
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#050510] whitespace-nowrap" style={{ border: `1px solid ${accent}50` }}>
+          <span className="text-xs font-bold tracking-widest" style={{ fontFamily: "var(--font-mono)", color: accent }}>{d.speaker}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: accent, animation: "glowPulse 2s infinite" }} />
+        <span className="text-xs tracking-widest" style={{ fontFamily: "var(--font-mono)", color: `${accent}99` }}>{d.sub}</span>
+      </div>
+      <div className="w-full glass-card rounded-2xl p-5 min-h-[88px]" style={{ borderColor: `${accent}20` }}>
+        <p className="text-white text-sm sm:text-base leading-relaxed text-center">
+          {displayed}{!done && <span className="inline-block w-0.5 h-4 ml-1 align-middle" style={{ background: accent, animation: "pulse 1s infinite" }} />}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {Array.from({ length: total }).map((_, i) => (
+          <div key={i} className="h-2 rounded-full transition-all duration-300" style={{ width: i === idx ? 24 : 8, background: i === idx ? accent : i < idx ? `${accent}50` : "#374151" }} />
+        ))}
+      </div>
+      <button onClick={onNext} className="btn-neon-cyan px-8 py-3 text-xs font-bold tracking-widest rounded-xl w-full sm:w-auto" style={{ fontFamily: "var(--font-orbitron)" }}>
+        {idx < total - 1 ? "NEXT ▶" : "ENTER NEURAL CORE ▶"}
+      </button>
+    </div>
+  );
+}
+
+function ScoreBar({ label, value, color, icon, delay = 0, show }: { label: string; value: number; color: string; icon: string; delay?: number; show: boolean }) {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    if (!show) return;
+    const t = setTimeout(() => setW(value), delay + 60);
+    return () => clearTimeout(t);
+  }, [value, delay, show]);
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1.5">
+        <span className="text-xs tracking-widest font-bold flex items-center gap-1.5" style={{ fontFamily: "var(--font-mono)", color }}>
+          <span>{icon}</span>{label}
+        </span>
+        <span className="text-xs font-black" style={{ color, fontFamily: "var(--font-orbitron)" }}>{w}%</span>
+      </div>
+      <div className="h-2.5 bg-gray-800/80 rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${w}%`, background: `linear-gradient(90deg, ${color}88, ${color})`, boxShadow: `0 0 8px ${color}60` }} />
+      </div>
+    </div>
+  );
+}
+
+function DualPartChallenge({ ch, cIdx, total, onComplete }: { ch: DualChallenge; cIdx: number; total: number; onComplete: (xp: number) => void }) {
+  const [part1, setPart1] = useState("");
+  const [part2, setPart2] = useState("");
+  const [state, setState] = useState<ChallengeState>("input");
+  const [evalStep, setEvalStep] = useState(0);
+  const [result, setResult] = useState<ScoreResult | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  const canSubmit = part1.trim().length >= ch.part1.minChars && part2.trim().length >= ch.part2.minChars;
+
+  function handleSubmit() {
+    if (!canSubmit) return;
+    const r = evaluateDual(part1, part2, ch, MISSION.xpPerChallenge);
+    setResult(r);
+    setState("evaluating");
+    setTimeout(() => setEvalStep(1), 400);
+    setTimeout(() => setEvalStep(2), 1100);
+    setTimeout(() => setEvalStep(3), 1800);
+    setTimeout(() => setEvalStep(4), 2500);
+    setTimeout(() => { setState("scored"); setShowFeedback(true); }, 3000);
+  }
+
+  if (state === "evaluating") {
+    return (
+      <div className="w-full max-w-lg mx-auto space-y-5">
+        <div className="glass-card rounded-2xl p-6 border border-purple-500/25 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" style={{ animation: "glowPulse 1s infinite" }} />
+            <span className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// NEURAL_ANALYSIS_RUNNING...</span>
+          </div>
+          {evalStep >= 1 && <div><div className="text-xs text-pink-400/70 tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>◈ SCANNING CREATIVE PATTERNS...</div><ScoreBar label="CREATIVITY" value={result?.creativity ?? 0} color="#f472b6" icon="✦" show={evalStep >= 1} /></div>}
+          {evalStep >= 2 && <div><div className="text-xs text-cyan-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ VERIFYING TECHNICAL ACCURACY...</div><ScoreBar label="TECHNICAL ACCURACY" value={result?.technical ?? 0} color="#00f5ff" icon="◈" show={evalStep >= 2} delay={60} /></div>}
+          {evalStep >= 3 && <div><div className="text-xs text-green-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ MEASURING CLARITY INDEX...</div><ScoreBar label="CLARITY" value={result?.clarity ?? 0} color="#4ade80" icon="◉" show={evalStep >= 3} delay={60} /></div>}
+          {evalStep >= 4 && <div><div className="text-xs text-yellow-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ EVALUATING TEACHING SKILL...</div><ScoreBar label="TEACHING SKILL" value={result?.teaching ?? 0} color="#fde047" icon="★" show={evalStep >= 4} delay={60} /></div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "scored" && result) {
+    const tc = TIER_CFG[result.tier];
+    return (
+      <div className="w-full max-w-lg mx-auto space-y-4">
+        <div className="glass-card rounded-2xl p-5 border border-purple-500/25 space-y-3">
+          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>// ANALYSIS_COMPLETE</div>
+          <div className="space-y-3">{SCORE_BARS.map(bar => <ScoreBar key={bar.key} label={bar.label} value={result[bar.key]} color={bar.color} icon={bar.icon} show />)}</div>
+          <div className="border-t border-gray-800 pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl font-black" style={{ fontFamily: "var(--font-orbitron)", color: tc.color, filter: `drop-shadow(0 0 12px ${tc.color})` }}>{result.tier}</div>
+              <div>
+                <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>GRADE</div>
+                <div className="text-xs font-bold" style={{ color: tc.color, fontFamily: "var(--font-mono)" }}>{tc.label}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</div>
+              <div className="text-2xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{result.xpEarned}</div>
+            </div>
+          </div>
+        </div>
+        {showFeedback && (
+          <div className="glass-card rounded-xl p-4" style={{ borderColor: `${tc.color}30`, borderWidth: 1, borderStyle: "solid" }}>
+            <div className="text-xs tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)", color: tc.color }}>◈ AI_FEEDBACK</div>
+            <p className="text-sm text-gray-300 leading-relaxed">{result.feedback}</p>
+          </div>
+        )}
+        <button onClick={() => onComplete(result.xpEarned)} className="w-full btn-neon-pink py-4 text-xs font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>
+          {cIdx < total - 1 ? "NEXT CHALLENGE ▶" : "COMPLETE MISSION ▶"}
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto phase-enter">
-      {/* NPC Avatar */}
-      <div className="relative">
-        <div
-          className="w-24 h-24 rounded-2xl flex items-center justify-center text-5xl animate-float relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, rgba(192,132,252,0.18), rgba(236,72,153,0.12))",
-            border: "2px solid rgba(192,132,252,0.55)",
-            boxShadow: "0 0 28px rgba(192,132,252,0.28), 0 0 55px rgba(192,132,252,0.12)",
-          }}
-        >
-          {dialogue.mood}
-          <div className="scan-line-anim absolute inset-0" style={{} /* purple scan line via CSS var override */} />
+    <div className="w-full max-w-lg mx-auto space-y-4">
+      <div className="glass-card rounded-xl p-4 border border-purple-500/20">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CHALLENGE {cIdx + 1}/{total}</span>
+          <span className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>● DUAL_ANALYSIS_MODE</span>
         </div>
-        <div
-          className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#050510] whitespace-nowrap"
-          style={{ border: "1px solid rgba(192,132,252,0.55)" }}
-        >
-          <span
-            className="text-xs font-bold text-purple-400 tracking-widest"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            ◆ {dialogue.speaker}
-          </span>
+        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mb-3">
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${((cIdx + 1) / total) * 100}%`, background: "linear-gradient(90deg, #bf00ff, #ff0080)" }} />
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">{ch.icon}</span>
+          <div>
+            <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CONCEPT</div>
+            <div className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{ch.concept}</div>
+          </div>
         </div>
       </div>
 
-      {/* Status badge */}
-      <div className="flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-purple-400 animate-glow-pulse" />
-        <span
-          className="text-xs tracking-widest text-purple-500/70"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          {dialogue.sub}
-        </span>
-      </div>
-
-      {/* Text bubble */}
-      <button
-        onClick={handleBoxClick}
-        className="w-full glass-card rounded-2xl p-6 min-h-[105px] text-left group hover:bg-white/[0.018] transition-colors"
-        style={{ borderColor: "rgba(192,132,252,0.22)" }}
-      >
-        <p className="text-white text-base sm:text-lg leading-relaxed text-center">
-          {displayed}
-          {!done && (
-            <span className="inline-block w-0.5 h-5 bg-purple-400 ml-1 animate-pulse align-middle" />
-          )}
-        </p>
-        {done && (
-          <p
-            className="text-center mt-3 text-xs tracking-widest text-purple-500/40 group-hover:text-purple-500/65 transition-colors"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            ▶ {index < total - 1 ? "CLICK TO CONTINUE" : "CLICK TO START QUIZ"}
-          </p>
-        )}
-      </button>
-
-      {/* Progress dots */}
-      <div className="flex gap-2 items-center">
-        {Array.from({ length: total }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-full transition-all duration-300"
-            style={{
-              height: 8,
-              width: i === index ? 24 : 8,
-              background:
-                i === index ? "#c084fc" : i < index ? "rgba(192,132,252,0.5)" : "#374151",
-            }}
-          />
+      <div className="grid grid-cols-2 gap-2">
+        {SCORE_BARS.map(b => (
+          <div key={b.key} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-900/60 border border-gray-800/50">
+            <span className="text-xs" style={{ color: b.color }}>{b.icon}</span>
+            <span className="text-xs text-gray-500 tracking-widest truncate" style={{ fontFamily: "var(--font-mono)" }}>{b.label}</span>
+          </div>
         ))}
       </div>
 
-      {/* Action button */}
-      <button
-        onClick={() => { playSound("click"); onNext(); }}
-        className="btn-neon-cyan px-8 py-3 text-xs font-bold tracking-widest rounded-xl active:scale-95 transition-transform"
-        style={{ fontFamily: "var(--font-orbitron)" }}
-      >
-        {index < total - 1 ? "NEXT ▶" : "START QUIZ ▶"}
+      {/* Part 1 */}
+      <div className="glass-card rounded-2xl overflow-hidden" style={{ borderColor: "rgba(244,114,182,0.3)", borderWidth: 1, borderStyle: "solid" }}>
+        <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "rgba(244,114,182,0.06)", borderBottom: "1px solid rgba(244,114,182,0.15)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-pink-400">✦ PART_1</span>
+            <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>REAL-WORLD ANALOGY</span>
+          </div>
+          <span className={`text-xs tracking-widest ${part1.length >= ch.part1.minChars ? "text-green-400" : "text-gray-600"}`} style={{ fontFamily: "var(--font-mono)" }}>
+            {part1.length}/{ch.part1.minChars}✓
+          </span>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-xs text-pink-300/80 mb-2 leading-relaxed">{ch.part1.prompt}</p>
+          <textarea value={part1} onChange={e => setPart1(e.target.value)} rows={4} placeholder={ch.part1.placeholder}
+            className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none outline-none leading-relaxed"
+            style={{ fontFamily: "var(--font-mono)" }} />
+        </div>
+      </div>
+
+      {/* Part 2 */}
+      <div className="glass-card rounded-2xl overflow-hidden" style={{ borderColor: "rgba(191,0,255,0.25)", borderWidth: 1, borderStyle: "solid" }}>
+        <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "rgba(191,0,255,0.05)", borderBottom: "1px solid rgba(191,0,255,0.12)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-purple-400">◈ PART_2</span>
+            <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>TECHNICAL DEFINITION</span>
+          </div>
+          <span className={`text-xs tracking-widest ${part2.length >= ch.part2.minChars ? "text-green-400" : "text-gray-600"}`} style={{ fontFamily: "var(--font-mono)" }}>
+            {part2.length}/{ch.part2.minChars}✓
+          </span>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-xs text-purple-300/80 mb-2 leading-relaxed">{ch.part2.prompt}</p>
+          <textarea value={part2} onChange={e => setPart2(e.target.value)} rows={4} placeholder={ch.part2.placeholder}
+            className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none outline-none leading-relaxed"
+            style={{ fontFamily: "var(--font-mono)" }} />
+        </div>
+      </div>
+
+      <button onClick={handleSubmit} disabled={!canSubmit}
+        className={`w-full py-4 text-xs font-bold tracking-widest rounded-xl transition-all ${canSubmit ? "btn-neon-pink" : "border border-gray-800 text-gray-700 cursor-not-allowed"}`}
+        style={{ fontFamily: "var(--font-orbitron)" }}>
+        {canSubmit ? "▶ SUBMIT TO NEURAL ANALYSIS" : `WRITE MORE... (P1: ${Math.max(0, ch.part1.minChars - part1.trim().length)} | P2: ${Math.max(0, ch.part2.minChars - part2.trim().length)} CHARS LEFT)`}
       </button>
     </div>
   );
 }
 
-// ─── Quiz Card ───────────────────────────────────────────────────────────────
-function QuizCard({
-  q,
-  qIndex,
-  total,
-  combo,
-  onAnswer,
-}: {
-  q: Question;
-  qIndex: number;
-  total: number;
-  combo: number;
-  onAnswer: (correct: boolean) => void;
-}) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const [entered, setEntered] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 40);
-    return () => clearTimeout(t);
-  }, []);
-
-  function handleSelect(idx: number) {
-    if (revealed) return;
-    setSelected(idx);
-    setRevealed(true);
-    const correct = idx === q.correct;
-    playSound(correct ? "correct" : "wrong");
-    setTimeout(() => onAnswer(correct), 1250);
-  }
-
-  const reactionLine = revealed
-    ? selected === q.correct
-      ? CORRECT_LINES[q.id % CORRECT_LINES.length]
-      : WRONG_LINES[q.id % WRONG_LINES.length]
-    : null;
-
+function ResultScreen({ totalXP, onClaim }: { totalXP: number; onClaim: () => void }) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => { setTimeout(() => setVis(true), 80); }, []);
+  const maxXP = MISSION.xpPerChallenge * CHALLENGES.length;
+  const pct = Math.min(100, Math.round((totalXP / maxXP) * 100));
   return (
-    <div
-      className={`w-full max-w-2xl mx-auto space-y-5 transition-all duration-350 ${
-        entered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-      }`}
-    >
-      {/* Progress row */}
-      <div className="flex items-center gap-3">
-        <span
-          className="text-xs text-gray-500 tracking-widest shrink-0"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          Q {qIndex + 1}/{total}
-        </span>
-        <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{
-              width: `${((qIndex + 1) / total) * 100}%`,
-              background: "linear-gradient(90deg, #c084fc, #ec4899)",
-              boxShadow: "0 0 8px rgba(192,132,252,0.5)",
-            }}
-          />
-        </div>
-        <div className="flex gap-1 shrink-0">
-          {Array.from({ length: total }).map((_, i) => (
-            <div
-              key={i}
-              className="w-2 h-2 rounded-full transition-all duration-300"
-              style={{
-                background: i < qIndex + 1 ? "#c084fc" : "#374151",
-                boxShadow: i === qIndex ? "0 0 6px #c084fc" : "none",
-              }}
-            />
-          ))}
-        </div>
-        {combo >= 2 && (
-          <div
-            className="combo-burst px-2 py-0.5 rounded-full text-xs font-black tracking-widest shrink-0"
-            style={{
-              fontFamily: "var(--font-orbitron)",
-              background: "rgba(192,132,252,0.15)",
-              border: "1px solid rgba(192,132,252,0.5)",
-              color: "#c084fc",
-              textShadow: "0 0 8px #c084fc",
-            }}
-          >
-            🔥 ×{combo}
-          </div>
-        )}
-      </div>
-
-      {/* AI reaction */}
-      {reactionLine && (
-        <div
-          className="text-xs tracking-widest text-center py-2 px-4 rounded-lg phase-enter-fast"
-          style={{
-            fontFamily: "var(--font-mono)",
-            color: selected === q.correct ? "#4ade80" : "#f97316",
-            background:
-              selected === q.correct ? "rgba(74,222,128,0.06)" : "rgba(249,115,22,0.06)",
-            border: `1px solid ${
-              selected === q.correct
-                ? "rgba(74,222,128,0.22)"
-                : "rgba(249,115,22,0.22)"
-            }`,
-          }}
-        >
-          {reactionLine}
-        </div>
-      )}
-
-      {/* Question card */}
-      <div
-        className="glass-card rounded-2xl p-6"
-        style={{ borderColor: "rgba(192,132,252,0.22)" }}
-      >
-        <div className="text-4xl mb-4 text-center">{q.icon}</div>
-        <h3
-          className="text-base sm:text-lg font-bold text-white text-center leading-relaxed"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          {q.question}
-        </h3>
-      </div>
-
-      {/* Answer options */}
-      <div className="space-y-2.5">
-        {q.options.map((opt, i) => {
-          const labels = ["A", "B", "C", "D"];
-          let borderColor = "rgba(55,65,81,0.8)";
-          let bg = "rgba(17,24,39,0.55)";
-          let textColor = "#d1d5db";
-          let labelColor = "#c084fc";
-          let shadow = "none";
-          let shakeClass = "";
-
-          if (revealed) {
-            if (i === q.correct) {
-              borderColor = "#22c55e";
-              bg = "rgba(34,197,94,0.11)";
-              textColor = "#86efac";
-              labelColor = "#22c55e";
-              shadow = "0 0 18px rgba(34,197,94,0.28)";
-            } else if (i === selected) {
-              borderColor = "#ef4444";
-              bg = "rgba(239,68,68,0.09)";
-              textColor = "#fca5a5";
-              labelColor = "#ef4444";
-              shadow = "0 0 12px rgba(239,68,68,0.22)";
-              shakeClass = "quiz-wrong-shake";
-            } else {
-              borderColor = "rgba(31,41,55,0.5)";
-              bg = "transparent";
-              textColor = "#374151";
-              labelColor = "#374151";
-            }
-          }
-
-          return (
-            <button
-              key={i}
-              onClick={() => handleSelect(i)}
-              disabled={revealed}
-              className={`w-full text-left p-4 rounded-xl border text-sm leading-relaxed transition-all duration-200
-                ${!revealed ? "hover-lift hover:border-purple-500/40 hover:bg-purple-500/5 cursor-pointer" : "cursor-default"}
-                ${revealed && i === q.correct ? "quiz-correct-glow" : ""}
-                ${shakeClass}`}
-              style={{
-                borderColor,
-                backgroundColor: bg,
-                color: textColor,
-                fontFamily: "var(--font-mono)",
-                boxShadow: shadow,
-              }}
-            >
-              <span className="mr-3 font-black text-xs tracking-widest" style={{ color: labelColor }}>
-                {labels[i]}.
-              </span>
-              {opt}
-              {revealed && i === q.correct && <span className="float-right">✓</span>}
-              {revealed && i === selected && i !== q.correct && (
-                <span className="float-right">✗</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Explanation */}
-      {revealed && (
-        <div
-          className="p-4 rounded-xl border text-sm leading-relaxed phase-enter"
-          style={{
-            borderColor:
-              selected === q.correct ? "rgba(34,197,94,0.3)" : "rgba(249,115,22,0.3)",
-            background:
-              selected === q.correct ? "rgba(34,197,94,0.07)" : "rgba(249,115,22,0.07)",
-            color: selected === q.correct ? "#86efac" : "#fdba74",
-          }}
-        >
-          <span
-            className="font-bold tracking-widest text-xs block mb-1.5"
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            {selected === q.correct
-              ? "✓ CORRECT — SYNAPSE ACTIVATED"
-              : "✗ INCORRECT — REVIEW PROTOCOL"}
-          </span>
-          💡 {q.explanation}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Result Screen ───────────────────────────────────────────────────────────
-function ResultScreen({
-  score,
-  total,
-  onClaim,
-}: {
-  score: number;
-  total: number;
-  onClaim: () => void;
-}) {
-  const pct = Math.round((score / total) * 100);
-  const grade = pct === 100 ? "S" : pct >= 75 ? "A" : pct >= 50 ? "B" : "C";
-  const gradeColors: Record<string, string> = {
-    S: "#fde047",
-    A: "#c084fc",
-    B: "#4ade80",
-    C: "#fb923c",
-  };
-  const earnedXP = Math.round(MISSION.xp * (score / total));
-  const earnedCredits = Math.round(MISSION.credits * (score / total));
-  const xpCount = useCountUp(earnedXP, 1200, 400);
-  const creditsCount = useCountUp(earnedCredits, 1100, 500);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 80); }, []);
-
-  return (
-    <div
-      className={`w-full max-w-2xl mx-auto space-y-5 transition-all duration-500 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-      }`}
-    >
-      <div className="glass-card rounded-2xl p-6 border border-purple-500/20 text-center">
-        <div
-          className="text-xs tracking-widest text-gray-500 mb-4"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          // QUIZ_COMPLETE
-        </div>
-
-        <div className="flex items-center justify-center gap-10 mb-2">
-          <div className="relative w-24 h-24 shrink-0">
-            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="42" fill="none"
-                stroke={gradeColors[grade]}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${(pct / 100) * 264} 264`}
-                style={{
-                  transition: "stroke-dasharray 1.3s cubic-bezier(0.22,1,0.36,1)",
-                  filter: `drop-shadow(0 0 8px ${gradeColors[grade]})`,
-                }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className="text-2xl font-black text-white"
-                style={{ fontFamily: "var(--font-orbitron)" }}
-              >
-                {score}/{total}
-              </span>
-              <span className="text-xs text-gray-500">CORRECT</span>
-            </div>
-          </div>
-
-          <div className="text-left">
-            <div
-              className="text-6xl font-black grade-reveal"
-              style={{
-                fontFamily: "var(--font-orbitron)",
-                color: gradeColors[grade],
-                filter: `drop-shadow(0 0 14px ${gradeColors[grade]})`,
-              }}
-            >
-              {grade}
-            </div>
-            <div
-              className="text-xs text-gray-500 tracking-widest"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              GRADE
-            </div>
-            <div className="text-xs text-gray-400 mt-1">
-              {pct === 100
-                ? "NEURAL MASTER!"
-                : pct >= 75
-                ? "DEEP LEARNER!"
-                : pct >= 50
-                ? "GOOD PROGRESS!"
-                : "KEEP TRAINING!"}
-            </div>
+    <div className={`w-full max-w-lg mx-auto space-y-4 transition-all duration-500 ${vis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
+      <div className="glass-card rounded-2xl p-6 border border-purple-500/25 text-center">
+        <div className="text-xs text-gray-500 tracking-widest mb-3" style={{ fontFamily: "var(--font-mono)" }}>// NEURAL_ANALYSIS_COMPLETE</div>
+        <div className="relative w-28 h-28 mx-auto mb-4">
+          <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke={pct >= 75 ? "#bf00ff" : pct >= 50 ? "#4ade80" : "#fb923c"}
+              strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 251} 251`}
+              style={{ transition: "stroke-dasharray 1.4s ease", filter: "drop-shadow(0 0 6px currentColor)" }} />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-2xl font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{pct}%</div>
+            <div className="text-xs text-gray-500" style={{ fontFamily: "var(--font-mono)" }}>SCORE</div>
           </div>
         </div>
+        <div className="text-lg font-black text-white mb-1" style={{ fontFamily: "var(--font-orbitron)" }}>
+          {pct >= 88 ? "NEURAL MASTER!" : pct >= 73 ? "DEEP LEARNER" : pct >= 55 ? "NETWORK BUILDER" : "KEEP TRAINING!"}
+        </div>
       </div>
-
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card rounded-xl p-4 border border-yellow-500/20 text-center">
           <div className="text-2xl mb-1">⚡</div>
-          <div
-            className="text-xl font-black text-yellow-400"
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            +{xpCount}
-          </div>
-          <div
-            className="text-xs text-gray-500 tracking-widest mt-0.5"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            XP EARNED
-          </div>
+          <div className="text-xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{totalXP}</div>
+          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</div>
         </div>
         <div className="glass-card rounded-xl p-4 border border-purple-500/20 text-center">
           <div className="text-2xl mb-1">💎</div>
-          <div
-            className="text-xl font-black text-purple-400"
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            +{creditsCount}
-          </div>
-          <div
-            className="text-xs text-gray-500 tracking-widest mt-0.5"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            CREDITS
-          </div>
+          <div className="text-xl font-black text-purple-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{Math.round(totalXP * 0.2)}</div>
+          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CREDITS</div>
         </div>
       </div>
-
-      <button
-        onClick={() => { playSound("levelup"); onClaim(); }}
-        className="w-full btn-neon-pink py-4 text-sm font-bold tracking-widest rounded-xl active:scale-98 transition-transform"
-        style={{ fontFamily: "var(--font-orbitron)" }}
-      >
-        ▶ CLAIM REWARDS
-      </button>
+      <button onClick={onClaim} className="w-full btn-neon-pink py-4 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ CLAIM REWARDS</button>
     </div>
   );
 }
 
-// ─── Complete Screen ─────────────────────────────────────────────────────────
-function CompleteScreen({ score, total }: { score: number; total: number }) {
-  const pct = Math.round((score / total) * 100);
-  const [skillsVisible, setSkillsVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setSkillsVisible(true), 300); }, []);
-
-  const skills = [
-    { icon: "🔗", skill: "Neural Network Structure", desc: "เข้าใจโครงสร้าง neurons และ layers" },
-    { icon: "⚡", skill: "Activation Functions", desc: "รู้จักบทบาทของ activation functions" },
-    { icon: "🖼️", skill: "CNN Applications", desc: "เข้าใจการประยุกต์ใช้ CNN สำหรับรูปภาพ" },
-  ];
-
+function CompleteScreen({ totalXP }: { totalXP: number }) {
   return (
-    <div className="w-full max-w-2xl mx-auto text-center space-y-8 phase-enter">
-      <div className="relative">
-        <div
-          className="absolute inset-0 rounded-3xl pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 0%, rgba(192,132,252,0.1) 0%, transparent 70%)",
-          }}
-        />
-        <div
-          className="text-xs tracking-widest text-purple-400 mb-3"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          // MISSION_DEBRIEF
-        </div>
-        <h2
-          className="text-3xl sm:text-4xl font-black"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          <span className="neon-text-cyan">MISSION</span>
-          <br />
-          <span className="neon-text-pink">ACCOMPLISHED</span>
-        </h2>
-        <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed mt-3">
-          คุณสำเร็จภารกิจ{" "}
-          <span className="text-white font-bold">Neural Network Basics</span> แล้ว!
-          {pct >= 75
-            ? " คุณเริ่มเข้าใจสมองของ AI แล้ว! 🔥"
-            : " ยังดี! เดินหน้าต่อสู่ภารกิจที่เล่นได้จริง!"}
-        </p>
-      </div>
-
-      <div className="glass-card rounded-2xl p-6 text-left space-y-3">
-        <div
-          className="text-xs font-bold tracking-widest text-gray-400 mb-4"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          SKILLS ACQUIRED:
-        </div>
-        {skills.map((item, i) => (
-          <div
-            key={item.skill}
-            className={`flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 skill-reveal ${skillsVisible ? "" : "opacity-0"}`}
-            style={{ animationDelay: `${i * 0.12}s` }}
-          >
-            <span className="text-xl shrink-0">{item.icon}</span>
+    <div className="w-full max-w-lg mx-auto text-center space-y-6">
+      <div className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// MISSION_DEBRIEF</div>
+      <h2 className="text-3xl font-black" style={{ fontFamily: "var(--font-orbitron)" }}>
+        <span className="neon-text-cyan">MISSION</span><br /><span className="neon-text-pink">ACCOMPLISHED</span>
+      </h2>
+      <p className="text-gray-400 text-sm leading-relaxed">คุณสำเร็จภารกิจ <span className="text-white font-bold">Neural Network Basics</span> แล้ว! ตอนนี้คุณเข้าใจสมองของ AI จากทั้งมุมมองชีวิตจริงและเทคนิค</p>
+      <div className="glass-card rounded-2xl p-5 text-left space-y-3">
+        <div className="text-xs font-bold tracking-widest text-gray-400 mb-3" style={{ fontFamily: "var(--font-orbitron)" }}>SKILLS ACQUIRED:</div>
+        {[
+          { icon: "🔗", skill: "Neural Architecture", desc: "เข้าใจโครงสร้าง neurons, layers, weights" },
+          { icon: "⚡", skill: "Activation Functions", desc: "รู้จัก ReLU, Sigmoid และ non-linearity" },
+          { icon: "🔄", skill: "Backpropagation", desc: "เข้าใจกระบวนการ training และ gradient descent" },
+        ].map(item => (
+          <div key={item.skill} className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+            <span className="text-lg shrink-0">{item.icon}</span>
             <div>
-              <div
-                className="text-sm font-bold text-white mb-0.5"
-                style={{ fontFamily: "var(--font-orbitron)" }}
-              >
-                {item.skill}
-              </div>
+              <div className="text-xs font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-orbitron)" }}>{item.skill}</div>
               <div className="text-xs text-gray-500">{item.desc}</div>
             </div>
-            <span className="ml-auto text-green-400 text-sm shrink-0">✓</span>
           </div>
         ))}
       </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link
-          href="/dashboard"
-          className="flex-1 btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          ← BACK TO HQ
-        </Link>
-        <Link
-          href="/missions/social-post"
-          className="flex-1 btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          ▶ PLAY: SOCIAL AI →
-        </Link>
+      <div className="flex flex-col gap-3">
+        <Link href="/dashboard" className="btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>← BACK TO HQ</Link>
+        <Link href="/missions/social-post" className="btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>▶ PLAY: SOCIAL AI AGENT →</Link>
       </div>
     </div>
   );
 }
 
-// ─── Reward Modal ────────────────────────────────────────────────────────────
-function RewardModal({
-  score,
-  total,
-  onClose,
-}: {
-  score: number;
-  total: number;
-  onClose: () => void;
-}) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 60); }, []);
-  const xp = Math.round(MISSION.xp * (score / total));
-  const credits = Math.round(MISSION.credits * (score / total));
-  const xpCount = useCountUp(xp, 1000, 300);
-  const credCount = useCountUp(credits, 900, 400);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
-      <div
-        className={`relative glass-card rounded-3xl p-8 max-w-sm w-full text-center transition-all duration-400 ${
-          visible ? "opacity-100 scale-100" : "opacity-0 scale-90"
-        }`}
-        style={{
-          border: "1px solid rgba(192,132,252,0.35)",
-          boxShadow: "0 0 60px rgba(192,132,252,0.18), 0 0 120px rgba(255,0,128,0.1)",
-        }}
-      >
-        <div
-          className="glow-ring"
-          style={{ border: "2px solid rgba(192,132,252,0.3)" }}
-        />
-
-        <div className="text-6xl mb-4 animate-float">{MISSION.icon}</div>
-        <div
-          className="text-xs tracking-widest text-purple-400 mb-2"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          // MISSION_COMPLETE
-        </div>
-        <div
-          className="text-2xl font-black text-white mb-6"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          NEURAL NETWORK
-          <br />
-          <span className="neon-text-pink">CLEARED</span>
-        </div>
-
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-            <span
-              className="text-sm font-bold text-white"
-              style={{ fontFamily: "var(--font-orbitron)" }}
-            >
-              ⚡ XP EARNED
-            </span>
-            <span
-              className="text-xl font-black text-yellow-400"
-              style={{ fontFamily: "var(--font-orbitron)" }}
-            >
-              +{xpCount}
-            </span>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-            <span
-              className="text-sm font-bold text-white"
-              style={{ fontFamily: "var(--font-orbitron)" }}
-            >
-              💎 CREDITS
-            </span>
-            <span
-              className="text-xl font-black text-purple-400"
-              style={{ fontFamily: "var(--font-orbitron)" }}
-            >
-              +{credCount}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 justify-center p-2 rounded-lg bg-pink-500/10 border border-pink-500/20 mb-5">
-          <span className="text-sm">🔓</span>
-          <span
-            className="text-xs text-pink-400 tracking-widest"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            UNLOCKED: SOCIAL AI AGENT
-          </span>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full btn-neon-pink py-3 text-sm font-bold tracking-widest rounded-xl active:scale-97 transition-transform"
-          style={{ fontFamily: "var(--font-orbitron)" }}
-        >
-          ▶ CONTINUE
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function NeuralNetworkMissionPage() {
   const [phase, setPhase] = useState<Phase>("briefing");
-  const [dialogueIndex, setDialogueIndex] = useState(0);
-  const [qIndex, setQIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [combo, setCombo] = useState(0);
+  const [dlgIdx, setDlgIdx] = useState(0);
+  const [cIdx, setCIdx] = useState(0);
+  const [totalXP, setTotalXP] = useState(0);
   const [showReward, setShowReward] = useState(false);
-  const [flashType, setFlashType] = useState<"correct" | "wrong" | "complete" | null>(null);
-  const [flashKey, setFlashKey] = useState(0);
-  const [floaters, setFloaters] = useState<Floater[]>([]);
-  const floaterIdRef = useRef(0);
 
-  function triggerFlash(type: "correct" | "wrong" | "complete") {
-    setFlashType(type);
-    setFlashKey((k) => k + 1);
-    setTimeout(() => setFlashType(null), 600);
+  function handleNextDlg() {
+    if (dlgIdx < NPC_DIALOGUE.length - 1) setDlgIdx(i => i + 1);
+    else setPhase("challenge");
   }
 
-  function spawnXPFloat(xp: number) {
-    const id = ++floaterIdRef.current;
-    const x = window.innerWidth / 2 - 40;
-    const y = window.innerHeight * 0.38;
-    setFloaters((prev) => [
-      ...prev,
-      { id, value: `+${xp} XP`, color: "#c084fc", x, y },
-    ]);
-    setTimeout(() => setFloaters((prev) => prev.filter((f) => f.id !== id)), 1300);
+  function handleChallengeComplete(xp: number) {
+    setTotalXP(t => t + xp);
+    if (cIdx < CHALLENGES.length - 1) setCIdx(i => i + 1);
+    else setPhase("result");
   }
-
-  function handleNextDialogue() {
-    if (dialogueIndex < NPC_DIALOGUE.length - 1) {
-      setDialogueIndex((i) => i + 1);
-    } else {
-      setPhase("quiz");
-    }
-  }
-
-  function handleAnswer(correct: boolean) {
-    if (correct) {
-      setScore((s) => s + 1);
-      setCombo((c) => c + 1);
-      spawnXPFloat(Math.round(MISSION.xp / QUESTIONS.length));
-      triggerFlash("correct");
-    } else {
-      setCombo(0);
-      triggerFlash("wrong");
-    }
-    if (qIndex < QUESTIONS.length - 1) {
-      setQIndex((i) => i + 1);
-    } else {
-      setTimeout(() => setPhase("result"), 200);
-    }
-  }
-
-  function handleClaim() {
-    setShowReward(false);
-    triggerFlash("complete");
-    playSound("complete");
-    setTimeout(() => setPhase("complete"), 300);
-  }
-
-  const phaseLabel =
-    phase === "briefing"
-      ? "BRIEFING"
-      : phase === "quiz"
-      ? `● Q${qIndex + 1}/${QUESTIONS.length}`
-      : phase === "result"
-      ? "RESULTS"
-      : "✓ COMPLETE";
-
-  const phaseBadgeStyle =
-    phase === "briefing"
-      ? "bg-gray-700/50 text-gray-500"
-      : phase === "quiz"
-      ? "bg-purple-500/15 text-purple-400 border border-purple-500/30"
-      : phase === "result"
-      ? "bg-pink-500/15 text-pink-400 border border-pink-500/30"
-      : "bg-green-500/15 text-green-400 border border-green-500/30";
 
   return (
     <div className="min-h-screen bg-[#050510] cyber-grid">
       <Navbar />
-      <ScreenFlash type={flashType} flashKey={flashKey} />
-      <XPFloaters floaters={floaters} />
-
       {showReward && (
-        <RewardModal score={score} total={QUESTIONS.length} onClose={handleClaim} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="glass-card rounded-3xl p-8 max-w-sm w-full text-center border border-purple-500/30" style={{ boxShadow: "0 0 60px rgba(191,0,255,0.15)" }}>
+            <div className="text-6xl mb-4" style={{ animation: "float 3s ease-in-out infinite" }}>🔗</div>
+            <div className="text-xs tracking-widest text-purple-400 mb-2" style={{ fontFamily: "var(--font-mono)" }}>MISSION COMPLETE!</div>
+            <div className="text-2xl font-black text-white mb-5" style={{ fontFamily: "var(--font-orbitron)" }}>NEURAL NETWORK<br /><span className="neon-text-pink">CLEARED</span></div>
+            <div className="space-y-3 mb-5">
+              <div className="flex justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <span className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>⚡ XP EARNED</span>
+                <span className="text-xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{totalXP}</span>
+              </div>
+              <div className="flex items-center gap-2 justify-center p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20">
+                <span>🔓</span>
+                <span className="text-xs text-pink-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>UNLOCKED: SOCIAL AI AGENT</span>
+              </div>
+            </div>
+            <button onClick={() => { setShowReward(false); setPhase("complete"); }} className="w-full btn-neon-pink py-3 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ CONTINUE</button>
+          </div>
+        </div>
       )}
-
       <div className="pt-20 pb-12 px-4">
-        {/* Mission header bar */}
-        <div className="max-w-2xl mx-auto mb-8">
+        <div className="max-w-lg mx-auto mb-6">
           <div className="glass-card rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-xl">
-                  {MISSION.icon}
-                </div>
+                <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-xl">{MISSION.icon}</div>
                 <div>
-                  <div
-                    className="text-xs text-purple-400 tracking-widest"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    {MISSION.code} • {MISSION.difficulty}
-                  </div>
-                  <div
-                    className="text-sm font-black text-white"
-                    style={{ fontFamily: "var(--font-orbitron)" }}
-                  >
-                    {MISSION.title}
-                  </div>
+                  <div className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>{MISSION.code} • {MISSION.difficulty}</div>
+                  <div className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{MISSION.title}</div>
                 </div>
               </div>
-              <div
-                className="flex items-center gap-4 text-xs"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                <span className="text-yellow-400">⚡ {MISSION.xp} XP</span>
-                <span className="text-purple-400">💎 {MISSION.credits}</span>
-                <span className={`px-2 py-1 rounded-lg tracking-widest ${phaseBadgeStyle}`}>
-                  {phaseLabel}
+              <div className="flex items-center gap-3 text-xs" style={{ fontFamily: "var(--font-mono)" }}>
+                <span className="text-yellow-400">⚡ {MISSION.xpPerChallenge * CHALLENGES.length} XP</span>
+                <span className={`px-2 py-1 rounded-lg tracking-widest ${phase === "briefing" ? "bg-gray-800 text-gray-500" : phase === "challenge" ? "bg-purple-500/15 text-purple-400 border border-purple-500/30" : phase === "result" ? "bg-pink-500/15 text-pink-400 border border-pink-500/30" : "bg-green-500/15 text-green-400 border border-green-500/30"}`}>
+                  {phase === "briefing" && "BRIEFING"}
+                  {phase === "challenge" && `● C${cIdx + 1}/${CHALLENGES.length}`}
+                  {phase === "result" && "RESULTS"}
+                  {phase === "complete" && "✓ DONE"}
                 </span>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Phase content */}
-        {phase === "briefing" && (
-          <div className="flex flex-col items-center min-h-[60vh] justify-center">
-            <DialogueBox
-              dialogue={NPC_DIALOGUE[dialogueIndex]}
-              onNext={handleNextDialogue}
-              index={dialogueIndex}
-              total={NPC_DIALOGUE.length}
-            />
-          </div>
-        )}
-        {phase === "quiz" && (
-          <div className="flex flex-col items-center min-h-[60vh] justify-center">
-            <QuizCard
-              key={qIndex}
-              q={QUESTIONS[qIndex]}
-              qIndex={qIndex}
-              total={QUESTIONS.length}
-              combo={combo}
-              onAnswer={handleAnswer}
-            />
-          </div>
-        )}
-        {phase === "result" && (
-          <ResultScreen
-            score={score}
-            total={QUESTIONS.length}
-            onClaim={() => setShowReward(true)}
-          />
-        )}
-        {phase === "complete" && (
-          <CompleteScreen score={score} total={QUESTIONS.length} />
-        )}
+        <div className="flex flex-col items-center">
+          {phase === "briefing" && <div className="w-full flex flex-col items-center justify-center min-h-[60vh]"><DialogueBox d={NPC_DIALOGUE[dlgIdx]} onNext={handleNextDlg} idx={dlgIdx} total={NPC_DIALOGUE.length} /></div>}
+          {phase === "challenge" && <DualPartChallenge key={cIdx} ch={CHALLENGES[cIdx]} cIdx={cIdx} total={CHALLENGES.length} onComplete={handleChallengeComplete} />}
+          {phase === "result" && <ResultScreen totalXP={totalXP} onClaim={() => setShowReward(true)} />}
+          {phase === "complete" && <CompleteScreen totalXP={totalXP} />}
+        </div>
       </div>
     </div>
   );
