@@ -129,7 +129,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <Link
-              href="#missions"
+              href="/missions/ml-101"
               className="btn-neon-pink px-6 py-3 text-xs font-bold tracking-widest rounded-xl shrink-0 text-center"
               style={{ fontFamily: "var(--font-orbitron)" }}
             >
