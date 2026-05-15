@@ -4,91 +4,162 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "briefing" | "challenge" | "result" | "complete";
 type ChallengeState = "input" | "evaluating" | "scored";
 type Tier = "S" | "A" | "B" | "C" | "D";
 
-const MISSION = { code: "M-003", title: "NEURAL NETWORK BASICS", icon: "🔗", xpPerChallenge: 87, credits: 60, difficulty: "MEDIUM" };
+const MISSION = { code: "M-003", title: "NEURAL NETWORK", icon: "🧬", xpPerChallenge: 60, credits: 50, difficulty: "MEDIUM" };
 
 const NPC_DIALOGUE = [
-  { speaker: "NEXUS", mood: "🤖", text: "ยอดเยี่ยม AGENT_001! คุณเข้าใจ ML แล้ว — ตอนนี้ถึงเวลาสำรวจ Neural Network โครงสร้างสมองของ AI!", sub: "LEVEL_UP DETECTED" },
-  { speaker: "NOVA-9", mood: "🧬", text: "สวัสดี! ฉันชื่อ NOVA-9 ฉันเป็น AI ที่สร้างจาก Neural Network จริงๆ วันนี้ฉันจะพาคุณเข้าไปดูว่าข้างในสมองของฉันมีอะไรบ้าง!", sub: "NEURAL_CORE EXPOSED" },
-  { speaker: "NOVA-9", mood: "🧬", text: "3 ความท้าทายรออยู่ — แต่ละข้อมีสองส่วน: เปรียบด้วยชีวิตจริง และอธิบายเทคนิค AI จะประเมิน 4 มิติและให้ feedback ทันที!", sub: "DUAL_ANALYSIS_MODE READY" },
+  { speaker: "SYNAPSE", mood: "🧬", text: "สวัสดี AGENT_001! ฉัน SYNAPSE ผู้นำทางด้าน Neural Network — พร้อมดำดิ่งสู่โลก Deep Learning แล้วหรือยัง?", sub: "NEURAL_CORE ONLINE" },
+  { speaker: "SYNAPSE", mood: "🧬", text: "แต่ละคำถามมี 3 ส่วน: ส่วน 1 = เปรียบกับชีวิตจริง | ส่วน 2 = อธิบายเชิงเทคนิค | ส่วน 3 = Bonus ความคิดของคุณ", sub: "FORMAT_READY" },
+  { speaker: "SYNAPSE", mood: "🧬", text: "ตอบสั้นก็ได้ ไม่ต้องกลัว แค่เขียนด้วยความเข้าใจของตัวเอง — นั่นคือ สิ่งที่ดีที่สุด!", sub: "BEGIN_TRANSMISSION" },
 ];
 
-interface DualChallenge {
-  id: number; concept: string; icon: string;
-  part1: { prompt: string; placeholder: string; minChars: number; keywords: string[] };
-  part2: { prompt: string; placeholder: string; minChars: number; keywords: string[] };
+interface Part {
+  label: string;
+  icon: string;
+  color: string;
+  prompt: string;
+  hint: string;
+  minChars: number;
+  keywords: string[];
+  optional?: boolean;
+}
+
+interface Challenge {
+  id: number;
+  concept: string;
+  icon: string;
+  parts: [Part, Part, Part];
   feedbacks: Record<Tier, string>;
 }
 
-const CHALLENGES: DualChallenge[] = [
+const CHALLENGES: Challenge[] = [
   {
-    id: 1, concept: "Neuron และ Neural Network", icon: "🔗",
-    part1: {
-      prompt: "เปรียบ Neuron ใน Neural Network กับอะไรในชีวิตจริงที่รับสัญญาณและส่งต่อข้อมูล",
-      placeholder: "เช่น: 'Neuron เหมือนพนักงานในออฟฟิศ ที่รับงานจากเพื่อนหลายคน (input) รวบรวมข้อมูลทั้งหมด ถ้ามีมากพอก็ส่งงานต่อให้คนถัดไป (output) — Neural Network คือออฟฟิศทั้งหมดที่มีพนักงานทำงานเป็นชั้นๆ...'",
-      minChars: 35,
-      keywords: ["เหมือน", "เปรียบ", "เช่น", "รับ", "ส่ง", "สัญญาณ", "ข้อมูล", "ต่อ", "ชั้น", "layer", "คน", "พนักงาน", "เซลล์", "ร่างกาย", "เส้นประสาท", "โรงงาน", "ระบบ", "สาย", "ไฟฟ้า"],
-    },
-    part2: {
-      prompt: "อธิบายโครงสร้าง Neural Network ทางเทคนิค — Neuron ทำงานอย่างไร และ layers มีกี่ประเภท",
-      placeholder: "เช่น: 'Neural Network ประกอบด้วย neurons ที่เชื่อมกันด้วย weights แต่ละ neuron รับ inputs คูณด้วย weights บวกรวมกัน แล้วผ่าน activation function เพื่อส่งออก output ผ่าน input layer, hidden layers, จนถึง output layer...'",
-      minChars: 30,
-      keywords: ["neuron", "weight", "layer", "input", "output", "hidden", "activation", "function", "bias", "network", "node", "connection", "deep", "shallow", "perceptron", "forward", "propagation", "matrix"],
-    },
+    id: 1,
+    concept: "Neural Network คืออะไร?",
+    icon: "🧠",
+    parts: [
+      {
+        label: "ตัวอย่างชีวิตจริง",
+        icon: "🌍",
+        color: "#c084fc",
+        prompt: "เปรียบ Neural Network กับสมองหรือเส้นประสาทของคนหรือสัตว์",
+        hint: "เช่น: Neural Network เหมือนสมองที่มีเซลล์ประสาทเชื่อมกันล้านๆ เซลล์ แต่ละเซลล์รับสัญญาณแล้วส่งต่อ...",
+        minChars: 20,
+        keywords: ["เหมือน", "เปรียบ", "เช่น", "สมอง", "เซลล์", "ประสาท", "เชื่อม", "รับ", "ส่ง", "โหนด", "เครือข่าย", "ชั้น", "layer"],
+      },
+      {
+        label: "นิยามทางเทคนิค",
+        icon: "⚙️",
+        color: "#e879f9",
+        prompt: "Neural Network ทำงานอย่างไรในแง่คอมพิวเตอร์?",
+        hint: "เช่น: Neural Network ประกอบด้วย node หลายชั้น (layer) — input layer รับข้อมูล hidden layer ประมวลผล output layer แสดงผล...",
+        minChars: 20,
+        keywords: ["neural network", "node", "layer", "input", "output", "hidden", "weight", "bias", "activation", "neuron", "deep learning", "ชั้น", "ประมวลผล"],
+      },
+      {
+        label: "ความคิดของคุณ",
+        icon: "💡",
+        color: "#fde047",
+        prompt: "ยกตัวอย่างว่า Neural Network ถูกใช้ทำอะไรในชีวิตจริง",
+        hint: "เช่น: รู้จำใบหน้า, แปลภาษา, ตรวจโรคจาก X-ray, สร้างรูปภาพ AI, ขับรถอัตโนมัติ...",
+        minChars: 15,
+        keywords: ["ใบหน้า", "แปล", "ภาษา", "โรค", "รูปภาพ", "ขับ", "รถ", "เสียง", "speech", "image", "face", "recognition", "detection", "translate"],
+        optional: true,
+      },
+    ],
     feedbacks: {
-      S: "ยอดเยี่ยม! Analogy ของคุณทำให้ Neural Network เข้าใจง่ายมาก และอธิบาย architecture ทางเทคนิคได้ถูกต้องครบถ้วน 🔥",
-      A: "ดีมาก! ตัวอย่างชัดเจน และเข้าใจ weights, layers, activation function ได้ถูกต้อง ⭐",
-      B: "ดี! ลองเพิ่มรายละเอียด เช่น weights, activation function และบอกว่า hidden layers ทำงานอย่างไร 💪",
-      C: "เข้าใจแนวคิดพื้นฐาน ลองอธิบายว่า Neuron 'ตัดสินใจ' ว่าจะส่งสัญญาณออกหรือไม่ได้อย่างไร 🔧",
-      D: "เริ่มต้นดี! ลองนึกถึง Neuron ว่ามันรับข้อมูลหลายทาง แล้วรวมกันแล้วตัดสินใจ — เหมือนสมองเลือกว่าจะทำอะไร 📚",
+      S: "ยอดเยี่ยม! เปรียบ Neural Network ได้สร้างสรรค์มาก และอธิบายโครงสร้างทางเทคนิคได้ถูกต้องสมบูรณ์ 🔥",
+      A: "ดีมาก! ตัวอย่างสมองชัดเจน และเข้าใจ layer ใน Neural Network ได้ถูกต้อง ⭐",
+      B: "ดี! ลองเพิ่มคำเทคนิคในส่วนที่ 2 เช่น input/output layer หรือ hidden layer 💪",
+      C: "เริ่มต้นได้ ลองอธิบายว่า Neural Network มีส่วนประกอบอะไรบ้างในส่วนที่ 2 ให้ชัดขึ้น 🔧",
+      D: "นึกถึงสมองคน — มีเซลล์ประสาทเชื่อมกัน Neural Network ก็เหมือนกัน มี node เชื่อมกันเป็นชั้นๆ 📚",
     },
   },
   {
-    id: 2, concept: "Activation Function และ Deep Learning", icon: "⚡",
-    part1: {
-      prompt: "อธิบาย Activation Function โดยเปรียบกับการตัดสินใจในชีวิตจริง — มันช่วยให้ AI ทำอะไรได้บ้าง",
-      placeholder: "เช่น: 'Activation Function เหมือนประตูเปิด-ปิดที่บ้าน ถ้าสัญญาณเสียงดังถึงระดับหนึ่งประตูถึงจะเปิด — ใน AI ถ้า neuron รับสัญญาณมากพอ (ถึง threshold) มันจะ fire ส่งข้อมูลต่อ ถ้าน้อยเกินก็ไม่ส่ง...'",
-      minChars: 30,
-      keywords: ["เหมือน", "เปรียบ", "เช่น", "ตัดสินใจ", "เปิด", "ปิด", "ระดับ", "ถึง", "ไม่ถึง", "threshold", "กรอง", "กั้น", "ผ่าน", "ไม่ผ่าน", "สวิตช์", "วาล์ว", "ประตู", "เลือก", "กระแส"],
-    },
-    part2: {
-      prompt: "อธิบาย Activation Function ทางเทคนิค (เช่น ReLU, Sigmoid) และอธิบายว่าทำไม Deep Learning ถึงต้องใช้หลาย layers",
-      placeholder: "เช่น: 'Activation function เช่น ReLU (Rectified Linear Unit) ทำให้ network เรียนรู้ความสัมพันธ์ non-linear ได้ Deep Learning ใช้ hidden layers หลายชั้นเพราะแต่ละชั้น abstract features ที่ซับซ้อนขึ้นเรื่อยๆ...'",
-      minChars: 28,
-      keywords: ["activation", "relu", "sigmoid", "tanh", "function", "non-linear", "deep learning", "layer", "hidden", "feature", "abstract", "complexity", "backpropagation", "gradient", "vanishing", "softmax", "threshold"],
-    },
+    id: 2,
+    concept: "Activation Function คืออะไร?",
+    icon: "⚡",
+    parts: [
+      {
+        label: "ตัวอย่างชีวิตจริง",
+        icon: "🌍",
+        color: "#c084fc",
+        prompt: "เปรียบ Activation Function กับการตัดสินใจที่มีเงื่อนไข เช่น สวิตช์หรือสัญญาณไฟ",
+        hint: "เช่น: Activation Function เหมือนสวิตช์ไฟ — ถ้าสัญญาณแรงพอก็เปิด ถ้าไม่ถึงก็ปิด ทำให้ Neural Network เรียนรู้แบบซับซ้อนได้...",
+        minChars: 20,
+        keywords: ["เหมือน", "เปรียบ", "เช่น", "สวิตช์", "ไฟ", "เปิด", "ปิด", "เงื่อนไข", "ถ้า", "สัญญาณ", "กรอง", "ตัดสินใจ", "เกณฑ์"],
+      },
+      {
+        label: "นิยามทางเทคนิค",
+        icon: "⚙️",
+        color: "#e879f9",
+        prompt: "Activation Function ทำหน้าที่อะไรใน Neural Network?",
+        hint: "เช่น: Activation Function เพิ่ม non-linearity ให้ network เรียนรู้ pattern ซับซ้อนได้ เช่น ReLU (f(x)=max(0,x)), Sigmoid, Softmax...",
+        minChars: 20,
+        keywords: ["activation", "relu", "sigmoid", "softmax", "tanh", "non-linear", "linearity", "output", "neuron", "threshold", "function", "ฟังก์ชัน", "ประมวลผล"],
+      },
+      {
+        label: "ความคิดของคุณ",
+        icon: "💡",
+        color: "#fde047",
+        prompt: "ทำไมถ้าไม่มี Activation Function Neural Network จะไม่สามารถเรียนรู้ได้?",
+        hint: "เช่น: ถ้าไม่มี activation function ทุก layer จะรวมกันเป็นแค่สมการเส้นตรง ซึ่งแก้ปัญหาซับซ้อนอย่าง image recognition ไม่ได้...",
+        minChars: 15,
+        keywords: ["linear", "เส้นตรง", "ซับซ้อน", "non-linear", "เรียนรู้", "pattern", "ปัญหา", "แก้", "สมการ"],
+        optional: true,
+      },
+    ],
     feedbacks: {
-      S: "ยอดมาก! อธิบาย Activation Function ด้วยตัวอย่างที่สร้างสรรค์และถูกต้องทางเทคนิคสมบูรณ์แบบ! 🏆",
-      A: "ดีมาก! ตัวอย่างชัดเจน และรู้จัก ReLU/Sigmoid ได้ถูกต้อง ลองอธิบายว่าทำไม non-linearity ถึงสำคัญ ⭐",
-      B: "ดี! แต่ลองเพิ่ม function name เช่น ReLU, Sigmoid และอธิบายว่า Deep Learning แต่ละ layer ทำหน้าที่อะไร 💪",
-      C: "เข้าใจว่า Activation Function ตัดสินใจเปิด/ปิด ลองเพิ่มว่ามันช่วยให้ AI เรียนรู้อะไรที่ซับซ้อนได้ 🔧",
-      D: "ลองนึกถึง Activation Function ว่าเหมือนสวิตช์ไฟ — ถ้าสัญญาณพอก็เปิด ถ้าน้อยเกินก็ปิด แล้วอธิบายด้วยคำพูดของคุณ 📚",
+      S: "ยอดมาก! Analogy สวิตช์ชัดเจนมาก และอธิบาย activation function ทางเทคนิคได้ถูกต้อง รวมถึงตอบ Bonus ได้ดีด้วย 🏆",
+      A: "ดีมาก! เข้าใจบทบาทของ activation function และรู้จักชื่อ function เช่น ReLU ได้ถูกต้อง ⭐",
+      B: "ดี! ลองเพิ่มชื่อ activation function เช่น ReLU หรือ Sigmoid ในส่วนที่ 2 💪",
+      C: "เริ่มต้นได้ ลองอธิบายว่า activation function ทำให้ network เรียนรู้อะไรได้บ้าง 🔧",
+      D: "นึกถึงสวิตช์ไฟ — เปิด/ปิดตามเงื่อนไข Activation Function ก็ทำแบบเดียวกันกับสัญญาณใน Neural Network 📚",
     },
   },
   {
-    id: 3, concept: "Training Process และ Backpropagation", icon: "🔄",
-    part1: {
-      prompt: "เปรียบกระบวนการฝึก Neural Network (Training) กับการฝึกทักษะบางอย่างในชีวิตจริง",
-      placeholder: "เช่น: 'Training Neural Network เหมือนนักกีฬายิงธนูฝึกซ้อม ครั้งแรกยิงพลาด ครูบอกว่าพลาดไปซ้าย 10 cm (error) นักกีฬาปรับมุมยิงเล็กน้อย ทำซ้ำหลายร้อยครั้งจนยิงถูกเป้าสม่ำเสมอ...'",
-      minChars: 35,
-      keywords: ["เหมือน", "เปรียบ", "เช่น", "ฝึก", "ซ้อม", "ผิด", "ถูก", "ปรับ", "แก้", "ลองซ้ำ", "ซ้ำ", "error", "ครู", "feedback", "ดีขึ้น", "นักกีฬา", "ดนตรี", "สอน", "ตรวจสอบ", "คะแนน"],
-    },
-    part2: {
-      prompt: "อธิบาย Backpropagation และ Gradient Descent ทางเทคนิค — มันทำงานอย่างไรในการฝึก Neural Network",
-      placeholder: "เช่น: 'Backpropagation คือการคำนวณ gradient ของ loss function เทียบกับแต่ละ weight โดยใช้ chain rule จาก output layer ย้อนกลับไป input layer จากนั้น Gradient Descent อัพเดท weights ให้ลด loss...'",
-      minChars: 28,
-      keywords: ["backpropagation", "gradient", "descent", "loss", "error", "weight", "update", "epoch", "learning rate", "optimization", "chain rule", "partial derivative", "minimize", "converge", "batch", "stochastic", "adam", "momentum"],
-    },
+    id: 3,
+    concept: "Backpropagation คืออะไร?",
+    icon: "🔄",
+    parts: [
+      {
+        label: "ตัวอย่างชีวิตจริง",
+        icon: "🌍",
+        color: "#c084fc",
+        prompt: "เปรียบ Backpropagation กับการเรียนรู้จากความผิดพลาดและแก้ไข",
+        hint: "เช่น: Backpropagation เหมือนนักกีฬาที่โยนลูกบาส ผิดแล้วได้รับ feedback ว่าพลาดซ้ายหรือขวา แล้วปรับการโยนครั้งต่อไป...",
+        minChars: 20,
+        keywords: ["เหมือน", "เปรียบ", "เช่น", "ผิด", "ปรับ", "แก้", "feedback", "เรียนรู้", "ครั้งถัดไป", "นักกีฬา", "โยน", "ซ้อม", "ความผิดพลาด"],
+      },
+      {
+        label: "นิยามทางเทคนิค",
+        icon: "⚙️",
+        color: "#e879f9",
+        prompt: "Backpropagation ทำงานอย่างไรใน Neural Network?",
+        hint: "เช่น: Backpropagation คำนวณ gradient ของ loss function แล้วส่งย้อนกลับ (backward) เพื่อปรับ weight ในแต่ละ layer โดยใช้ gradient descent...",
+        minChars: 20,
+        keywords: ["backpropagation", "gradient", "loss", "weight", "backward", "forward", "descent", "update", "error", "derivative", "chain rule", "ปรับ", "ย้อนกลับ"],
+      },
+      {
+        label: "ความคิดของคุณ",
+        icon: "💡",
+        color: "#fde047",
+        prompt: "ทำไม Backpropagation จึงเป็นหัวใจสำคัญของการเทรน Neural Network?",
+        hint: "เช่น: เพราะมันทำให้ network รู้ว่า weight แต่ละตัวต้องปรับมากน้อยแค่ไหน จึงสามารถลด error ได้อย่างมีประสิทธิภาพ...",
+        minChars: 15,
+        keywords: ["weight", "ปรับ", "error", "ลด", "ประสิทธิภาพ", "เทรน", "training", "สำคัญ", "เรียนรู้", "gradient"],
+        optional: true,
+      },
+    ],
     feedbacks: {
-      S: "ยอดเยี่ยม! Analogy เรื่อง Training ของคุณสมจริงมาก และอธิบาย Backpropagation + Gradient Descent ได้ถูกต้องสมบูรณ์ 🚀",
-      A: "ดีมาก! เข้าใจ Training process และรู้จักคำศัพท์สำคัญ ลองอธิบาย Learning Rate และผลกระทบของมันเพิ่ม ⭐",
-      B: "ดี! เข้าใจหลักการ ลองเพิ่ม keyword เช่น gradient, loss function, learning rate เพื่อให้ครบถ้วน 💪",
-      C: "เข้าใจว่า Training คือการปรับ weights ซ้ำๆ ลองอธิบายว่า Backpropagation ช่วยให้รู้ว่าต้องปรับ weight ไหนอย่างไร 🔧",
-      D: "ลองคิดว่า Training เหมือนการแก้ข้อสอบ — ถ้าตอบผิด (loss สูง) ก็ต้องปรับวิธีคิด (weights) แล้วลองใหม่จนถูก 📚",
+      S: "ยอดเยี่ยม! ตัวอย่างนักกีฬาสมจริงมาก และอธิบาย gradient descent / backpropagation ได้ถูกต้องสมบูรณ์ 🚀",
+      A: "ดีมาก! เข้าใจกระบวนการ backpropagation และการปรับ weight ได้ถูกต้อง ⭐",
+      B: "ดี! ลองเพิ่มคำว่า gradient หรือ weight ในส่วนที่ 2 เพื่อให้คำตอบสมบูรณ์ขึ้น 💪",
+      C: "เริ่มต้นดี ลองอธิบายให้ชัดขึ้นว่า backpropagation ปรับอะไร และทำอย่างไร 🔧",
+      D: "Backpropagation = เรียนรู้จากความผิดพลาด เหมือนทำโจทย์ผิดแล้วดูเฉลยปรับความเข้าใจ — แล้วเชื่อมกับ AI 📚",
     },
   },
 ];
@@ -98,25 +169,25 @@ interface ScoreResult {
   total: number; tier: Tier; xpEarned: number; feedback: string;
 }
 
-function evaluateDual(p1: string, p2: string, ch: DualChallenge, baseXP: number): ScoreResult {
-  const t1 = p1.toLowerCase();
-  const t2 = p2.toLowerCase();
-  const teachWords = ["เช่น", "เหมือน", "เปรียบ", "คือ", "ทำให้", "เพราะ", "ตัวอย่าง", "นั่นคือ", "กล่าวคือ", "หมายความ"];
+function evaluate(parts: string[], ch: Challenge, baseXP: number): ScoreResult {
+  const [p1, p2, p3] = parts.map(p => p.toLowerCase());
+  const teachWords = ["เช่น", "เหมือน", "เปรียบ", "คือ", "ทำให้", "เพราะ", "ตัวอย่าง", "นั่นคือ"];
 
-  const cHits = ch.part1.keywords.filter(k => t1.includes(k)).length;
-  const creativity = Math.min(100, 20 + cHits * 13 + Math.min(28, Math.floor(p1.length / 4)));
+  const cHits = ch.parts[0].keywords.filter(k => p1.includes(k)).length;
+  const creativity = Math.min(100, 22 + cHits * 14 + Math.min(26, Math.floor(parts[0].length / 4)));
 
-  const tHits = ch.part2.keywords.filter(k => t2.includes(k)).length;
-  const technical = Math.min(100, 15 + tHits * 16 + Math.min(24, Math.floor(p2.length / 5)));
+  const tHits = ch.parts[1].keywords.filter(k => p2.includes(k)).length;
+  const technical = Math.min(100, 18 + tHits * 18 + Math.min(22, Math.floor(parts[1].length / 5)));
 
-  const totalLen = p1.length + p2.length;
-  const clarity = Math.min(100, 15 + Math.min(38, Math.floor(totalLen / 6))
-    + (p1.length >= 35 ? 12 : 0) + (p2.length >= 28 ? 12 : 0)
-    + (p1.length >= 70 ? 8 : 0) + (p2.length >= 60 ? 8 : 0));
+  const totalLen = parts[0].length + parts[1].length + (parts[2]?.length ?? 0);
+  const clarity = Math.min(100, 18 + Math.min(40, Math.floor(totalLen / 5))
+    + (parts[0].length >= 20 ? 14 : 0) + (parts[1].length >= 20 ? 14 : 0));
 
-  const tvHits = teachWords.filter(k => (t1 + " " + t2).includes(k)).length;
-  const teaching = Math.min(100, 20 + tvHits * 11 + (p1.length > 40 && p2.length > 35 ? 18 : 6)
-    + Math.min(18, Math.floor(totalLen / 10)));
+  const p3Hits = p3 ? ch.parts[2].keywords.filter(k => p3.includes(k)).length : 0;
+  const teachHits = teachWords.filter(k => (p1 + " " + p2).includes(k)).length;
+  const teaching = Math.min(100, 20 + teachHits * 10 + p3Hits * 12
+    + (p3 && parts[2].length >= 15 ? 18 : 0)
+    + Math.min(16, Math.floor(totalLen / 12)));
 
   const total = Math.round((creativity + technical + clarity + teaching) / 4);
   const tier: Tier = total >= 88 ? "S" : total >= 73 ? "A" : total >= 55 ? "B" : total >= 35 ? "C" : "D";
@@ -131,8 +202,8 @@ const TIER_CFG: Record<Tier, { color: string; label: string }> = {
 };
 
 const SCORE_BARS = [
-  { key: "creativity" as const, label: "CREATIVITY",         color: "#f472b6", icon: "✦" },
-  { key: "technical"  as const, label: "TECHNICAL ACCURACY", color: "#00f5ff", icon: "◈" },
+  { key: "creativity" as const, label: "CREATIVITY",         color: "#c084fc", icon: "✦" },
+  { key: "technical"  as const, label: "TECHNICAL ACCURACY", color: "#e879f9", icon: "◈" },
   { key: "clarity"    as const, label: "CLARITY",            color: "#4ade80", icon: "◉" },
   { key: "teaching"   as const, label: "TEACHING SKILL",     color: "#fde047", icon: "★" },
 ];
@@ -151,34 +222,32 @@ function useTypewriter(text: string, speed = 26) {
 
 function DialogueBox({ d, onNext, idx, total }: { d: (typeof NPC_DIALOGUE)[0]; onNext: () => void; idx: number; total: number }) {
   const { displayed, done } = useTypewriter(d.text);
-  const isNova = d.speaker === "NOVA-9";
-  const accent = isNova ? "#bf00ff" : "#00f5ff";
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-lg mx-auto">
       <div className="relative">
-        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ animation: "float 4s ease-in-out infinite", background: isNova ? "linear-gradient(135deg,rgba(191,0,255,0.2),rgba(255,0,128,0.12))" : "linear-gradient(135deg,rgba(0,245,255,0.12),rgba(191,0,255,0.1))", border: `2px solid ${accent}60` }}>
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ animation: "float 4s ease-in-out infinite", background: "linear-gradient(135deg,rgba(192,132,252,0.18),rgba(232,121,249,0.12))", border: "2px solid rgba(192,132,252,0.45)" }}>
           {d.mood}
         </div>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#050510] whitespace-nowrap" style={{ border: `1px solid ${accent}50` }}>
-          <span className="text-xs font-bold tracking-widest" style={{ fontFamily: "var(--font-mono)", color: accent }}>{d.speaker}</span>
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#050510] border border-purple-500/40 whitespace-nowrap">
+          <span className="text-xs font-bold text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>{d.speaker}</span>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: accent, animation: "glowPulse 2s infinite" }} />
-        <span className="text-xs tracking-widest" style={{ fontFamily: "var(--font-mono)", color: `${accent}99` }}>{d.sub}</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block" style={{ animation: "glowPulse 2s infinite" }} />
+        <span className="text-xs tracking-widest text-purple-500/80" style={{ fontFamily: "var(--font-mono)" }}>{d.sub}</span>
       </div>
-      <div className="w-full glass-card rounded-2xl p-5 min-h-[88px]" style={{ borderColor: `${accent}20` }}>
+      <div className="w-full glass-card rounded-2xl p-5 border border-purple-500/15 min-h-[88px]">
         <p className="text-white text-sm sm:text-base leading-relaxed text-center">
-          {displayed}{!done && <span className="inline-block w-0.5 h-4 ml-1 align-middle" style={{ background: accent, animation: "pulse 1s infinite" }} />}
+          {displayed}{!done && <span className="inline-block w-0.5 h-4 bg-purple-400 ml-1 align-middle" style={{ animation: "pulse 1s infinite" }} />}
         </p>
       </div>
       <div className="flex gap-2">
         {Array.from({ length: total }).map((_, i) => (
-          <div key={i} className="h-2 rounded-full transition-all duration-300" style={{ width: i === idx ? 24 : 8, background: i === idx ? accent : i < idx ? `${accent}50` : "#374151" }} />
+          <div key={i} className="h-2 rounded-full transition-all duration-300" style={{ width: i === idx ? 24 : 8, background: i === idx ? "#c084fc" : i < idx ? "rgba(192,132,252,0.4)" : "#374151" }} />
         ))}
       </div>
       <button onClick={onNext} className="btn-neon-cyan px-8 py-3 text-xs font-bold tracking-widest rounded-xl w-full sm:w-auto" style={{ fontFamily: "var(--font-orbitron)" }}>
-        {idx < total - 1 ? "NEXT ▶" : "ENTER NEURAL CORE ▶"}
+        {idx < total - 1 ? "NEXT ▶" : "เริ่มฝึก ▶"}
       </button>
     </div>
   );
@@ -206,40 +275,35 @@ function ScoreBar({ label, value, color, icon, delay = 0, show }: { label: strin
   );
 }
 
-function DualPartChallenge({ ch, cIdx, total, onComplete }: { ch: DualChallenge; cIdx: number; total: number; onComplete: (xp: number) => void }) {
-  const [part1, setPart1] = useState("");
-  const [part2, setPart2] = useState("");
+function ChallengeCard({ ch, cIdx, total, onComplete }: { ch: Challenge; cIdx: number; total: number; onComplete: (xp: number) => void }) {
+  const [vals, setVals] = useState(["", "", ""]);
   const [state, setState] = useState<ChallengeState>("input");
   const [evalStep, setEvalStep] = useState(0);
   const [result, setResult] = useState<ScoreResult | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
 
-  const canSubmit = part1.trim().length >= ch.part1.minChars && part2.trim().length >= ch.part2.minChars;
+  const canSubmit = vals[0].trim().length >= ch.parts[0].minChars && vals[1].trim().length >= ch.parts[1].minChars;
 
   function handleSubmit() {
     if (!canSubmit) return;
-    const r = evaluateDual(part1, part2, ch, MISSION.xpPerChallenge);
+    const r = evaluate(vals, ch, MISSION.xpPerChallenge);
     setResult(r);
     setState("evaluating");
-    setTimeout(() => setEvalStep(1), 400);
-    setTimeout(() => setEvalStep(2), 1100);
-    setTimeout(() => setEvalStep(3), 1800);
-    setTimeout(() => setEvalStep(4), 2500);
-    setTimeout(() => { setState("scored"); setShowFeedback(true); }, 3000);
+    [400, 1100, 1800, 2500].forEach((ms, i) => setTimeout(() => setEvalStep(i + 1), ms));
+    setTimeout(() => setState("scored"), 3000);
   }
 
   if (state === "evaluating") {
     return (
-      <div className="w-full max-w-lg mx-auto space-y-5">
-        <div className="glass-card rounded-2xl p-6 border border-purple-500/25 space-y-4">
+      <div className="w-full max-w-lg mx-auto">
+        <div className="glass-card rounded-2xl p-6 border border-purple-500/20 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" style={{ animation: "glowPulse 1s infinite" }} />
-            <span className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// NEURAL_ANALYSIS_RUNNING...</span>
+            <span className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// AI_ANALYSIS_RUNNING...</span>
           </div>
-          {evalStep >= 1 && <div><div className="text-xs text-pink-400/70 tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>◈ SCANNING CREATIVE PATTERNS...</div><ScoreBar label="CREATIVITY" value={result?.creativity ?? 0} color="#f472b6" icon="✦" show={evalStep >= 1} /></div>}
-          {evalStep >= 2 && <div><div className="text-xs text-cyan-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ VERIFYING TECHNICAL ACCURACY...</div><ScoreBar label="TECHNICAL ACCURACY" value={result?.technical ?? 0} color="#00f5ff" icon="◈" show={evalStep >= 2} delay={60} /></div>}
-          {evalStep >= 3 && <div><div className="text-xs text-green-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ MEASURING CLARITY INDEX...</div><ScoreBar label="CLARITY" value={result?.clarity ?? 0} color="#4ade80" icon="◉" show={evalStep >= 3} delay={60} /></div>}
-          {evalStep >= 4 && <div><div className="text-xs text-yellow-400/70 tracking-widest mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ EVALUATING TEACHING SKILL...</div><ScoreBar label="TEACHING SKILL" value={result?.teaching ?? 0} color="#fde047" icon="★" show={evalStep >= 4} delay={60} /></div>}
+          {evalStep >= 1 && <div><p className="text-xs text-purple-300/70 mb-2" style={{ fontFamily: "var(--font-mono)" }}>◈ SCANNING ANALOGY...</p><ScoreBar label="CREATIVITY" value={result?.creativity ?? 0} color="#c084fc" icon="✦" show /></div>}
+          {evalStep >= 2 && <div><p className="text-xs text-pink-400/70 mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ CHECKING TECHNICAL TERMS...</p><ScoreBar label="TECHNICAL ACCURACY" value={result?.technical ?? 0} color="#e879f9" icon="◈" show delay={60} /></div>}
+          {evalStep >= 3 && <div><p className="text-xs text-green-400/70 mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ MEASURING CLARITY...</p><ScoreBar label="CLARITY" value={result?.clarity ?? 0} color="#4ade80" icon="◉" show delay={60} /></div>}
+          {evalStep >= 4 && <div><p className="text-xs text-yellow-400/70 mb-2 mt-3" style={{ fontFamily: "var(--font-mono)" }}>◈ EVALUATING TEACHING SKILL...</p><ScoreBar label="TEACHING SKILL" value={result?.teaching ?? 0} color="#fde047" icon="★" show delay={60} /></div>}
         </div>
       </div>
     );
@@ -249,106 +313,89 @@ function DualPartChallenge({ ch, cIdx, total, onComplete }: { ch: DualChallenge;
     const tc = TIER_CFG[result.tier];
     return (
       <div className="w-full max-w-lg mx-auto space-y-4">
-        <div className="glass-card rounded-2xl p-5 border border-purple-500/25 space-y-3">
-          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>// ANALYSIS_COMPLETE</div>
+        <div className="glass-card rounded-2xl p-5 border border-purple-500/15 space-y-3">
+          <p className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>// ANALYSIS_COMPLETE</p>
           <div className="space-y-3">{SCORE_BARS.map(bar => <ScoreBar key={bar.key} label={bar.label} value={result[bar.key]} color={bar.color} icon={bar.icon} show />)}</div>
           <div className="border-t border-gray-800 pt-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="text-4xl font-black" style={{ fontFamily: "var(--font-orbitron)", color: tc.color, filter: `drop-shadow(0 0 12px ${tc.color})` }}>{result.tier}</div>
               <div>
-                <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>GRADE</div>
-                <div className="text-xs font-bold" style={{ color: tc.color, fontFamily: "var(--font-mono)" }}>{tc.label}</div>
+                <p className="text-xs text-gray-500" style={{ fontFamily: "var(--font-mono)" }}>GRADE</p>
+                <p className="text-xs font-bold" style={{ color: tc.color, fontFamily: "var(--font-mono)" }}>{tc.label}</p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</div>
-              <div className="text-2xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{result.xpEarned}</div>
+              <p className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</p>
+              <p className="text-2xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{result.xpEarned}</p>
             </div>
           </div>
         </div>
-        {showFeedback && (
-          <div className="glass-card rounded-xl p-4" style={{ borderColor: `${tc.color}30`, borderWidth: 1, borderStyle: "solid" }}>
-            <div className="text-xs tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)", color: tc.color }}>◈ AI_FEEDBACK</div>
-            <p className="text-sm text-gray-300 leading-relaxed">{result.feedback}</p>
-          </div>
-        )}
+        <div className="glass-card rounded-xl p-4" style={{ borderColor: `${tc.color}30`, borderWidth: 1, borderStyle: "solid" }}>
+          <p className="text-xs tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)", color: tc.color }}>◈ AI_FEEDBACK</p>
+          <p className="text-sm text-gray-300 leading-relaxed">{result.feedback}</p>
+        </div>
         <button onClick={() => onComplete(result.xpEarned)} className="w-full btn-neon-pink py-4 text-xs font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>
-          {cIdx < total - 1 ? "NEXT CHALLENGE ▶" : "COMPLETE MISSION ▶"}
+          {cIdx < total - 1 ? "คำถามถัดไป ▶" : "เสร็จสิ้นภารกิจ ▶"}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto space-y-4">
-      <div className="glass-card rounded-xl p-4 border border-purple-500/20">
+    <div className="w-full max-w-lg mx-auto space-y-3">
+      <div className="glass-card rounded-xl p-4 border border-purple-500/15">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CHALLENGE {cIdx + 1}/{total}</span>
-          <span className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>● DUAL_ANALYSIS_MODE</span>
+          <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>คำถาม {cIdx + 1}/{total}</span>
+          <span className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>● 3-PART MODE</span>
         </div>
         <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mb-3">
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${((cIdx + 1) / total) * 100}%`, background: "linear-gradient(90deg, #bf00ff, #ff0080)" }} />
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${((cIdx + 1) / total) * 100}%`, background: "linear-gradient(90deg, #c084fc, #e879f9)" }} />
         </div>
         <div className="flex items-center gap-3">
           <span className="text-3xl">{ch.icon}</span>
           <div>
-            <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CONCEPT</div>
-            <div className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{ch.concept}</div>
+            <p className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CONCEPT</p>
+            <p className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{ch.concept}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {SCORE_BARS.map(b => (
-          <div key={b.key} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-900/60 border border-gray-800/50">
-            <span className="text-xs" style={{ color: b.color }}>{b.icon}</span>
-            <span className="text-xs text-gray-500 tracking-widest truncate" style={{ fontFamily: "var(--font-mono)" }}>{b.label}</span>
+      {ch.parts.map((part, i) => (
+        <div key={i} className="glass-card rounded-2xl overflow-hidden" style={{ borderColor: `${part.color}${part.optional ? "22" : "30"}`, borderWidth: 1, borderStyle: "solid" }}>
+          <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: `${part.color}08`, borderBottom: `1px solid ${part.color}14` }}>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{part.icon}</span>
+              <span className="text-xs font-black tracking-widest" style={{ color: part.color, fontFamily: "var(--font-mono)" }}>
+                ส่วนที่ {i + 1}{part.optional ? " — BONUS" : ""}
+              </span>
+              <span className="text-xs text-gray-500 hidden sm:inline" style={{ fontFamily: "var(--font-mono)" }}>{part.label}</span>
+            </div>
+            <span className={`text-xs tracking-widest ${vals[i].length >= part.minChars ? "text-green-400" : "text-gray-600"}`} style={{ fontFamily: "var(--font-mono)" }}>
+              {vals[i].length}{part.optional ? "" : `/${part.minChars}✓`}
+            </span>
           </div>
-        ))}
-      </div>
-
-      {/* Part 1 */}
-      <div className="glass-card rounded-2xl overflow-hidden" style={{ borderColor: "rgba(244,114,182,0.3)", borderWidth: 1, borderStyle: "solid" }}>
-        <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "rgba(244,114,182,0.06)", borderBottom: "1px solid rgba(244,114,182,0.15)" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-pink-400">✦ PART_1</span>
-            <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>REAL-WORLD ANALOGY</span>
+          <div className="px-4 py-3">
+            <p className="text-xs mb-2 leading-relaxed font-bold" style={{ color: part.color }}>
+              {part.optional ? "🎁 " : ""}{part.prompt}
+            </p>
+            <textarea
+              value={vals[i]}
+              onChange={e => setVals(prev => { const n = [...prev]; n[i] = e.target.value; return n; })}
+              rows={3}
+              placeholder={part.hint}
+              className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none outline-none leading-relaxed"
+              style={{ fontFamily: "var(--font-mono)" }}
+            />
           </div>
-          <span className={`text-xs tracking-widest ${part1.length >= ch.part1.minChars ? "text-green-400" : "text-gray-600"}`} style={{ fontFamily: "var(--font-mono)" }}>
-            {part1.length}/{ch.part1.minChars}✓
-          </span>
         </div>
-        <div className="px-4 py-3">
-          <p className="text-xs text-pink-300/80 mb-2 leading-relaxed">{ch.part1.prompt}</p>
-          <textarea value={part1} onChange={e => setPart1(e.target.value)} rows={4} placeholder={ch.part1.placeholder}
-            className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none outline-none leading-relaxed"
-            style={{ fontFamily: "var(--font-mono)" }} />
-        </div>
-      </div>
-
-      {/* Part 2 */}
-      <div className="glass-card rounded-2xl overflow-hidden" style={{ borderColor: "rgba(191,0,255,0.25)", borderWidth: 1, borderStyle: "solid" }}>
-        <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "rgba(191,0,255,0.05)", borderBottom: "1px solid rgba(191,0,255,0.12)" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-purple-400">◈ PART_2</span>
-            <span className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>TECHNICAL DEFINITION</span>
-          </div>
-          <span className={`text-xs tracking-widest ${part2.length >= ch.part2.minChars ? "text-green-400" : "text-gray-600"}`} style={{ fontFamily: "var(--font-mono)" }}>
-            {part2.length}/{ch.part2.minChars}✓
-          </span>
-        </div>
-        <div className="px-4 py-3">
-          <p className="text-xs text-purple-300/80 mb-2 leading-relaxed">{ch.part2.prompt}</p>
-          <textarea value={part2} onChange={e => setPart2(e.target.value)} rows={4} placeholder={ch.part2.placeholder}
-            className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none outline-none leading-relaxed"
-            style={{ fontFamily: "var(--font-mono)" }} />
-        </div>
-      </div>
+      ))}
 
       <button onClick={handleSubmit} disabled={!canSubmit}
         className={`w-full py-4 text-xs font-bold tracking-widest rounded-xl transition-all ${canSubmit ? "btn-neon-pink" : "border border-gray-800 text-gray-700 cursor-not-allowed"}`}
         style={{ fontFamily: "var(--font-orbitron)" }}>
-        {canSubmit ? "▶ SUBMIT TO NEURAL ANALYSIS" : `WRITE MORE... (P1: ${Math.max(0, ch.part1.minChars - part1.trim().length)} | P2: ${Math.max(0, ch.part2.minChars - part2.trim().length)} CHARS LEFT)`}
+        {canSubmit
+          ? "▶ ส่งให้ AI ประเมิน"
+          : `เขียนเพิ่มอีก (ส่วน 1: ${Math.max(0, ch.parts[0].minChars - vals[0].trim().length)} | ส่วน 2: ${Math.max(0, ch.parts[1].minChars - vals[1].trim().length)} ตัวอักษร)`}
       </button>
     </div>
   );
@@ -361,37 +408,37 @@ function ResultScreen({ totalXP, onClaim }: { totalXP: number; onClaim: () => vo
   const pct = Math.min(100, Math.round((totalXP / maxXP) * 100));
   return (
     <div className={`w-full max-w-lg mx-auto space-y-4 transition-all duration-500 ${vis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
-      <div className="glass-card rounded-2xl p-6 border border-purple-500/25 text-center">
-        <div className="text-xs text-gray-500 tracking-widest mb-3" style={{ fontFamily: "var(--font-mono)" }}>// NEURAL_ANALYSIS_COMPLETE</div>
+      <div className="glass-card rounded-2xl p-6 border border-purple-500/15 text-center">
+        <p className="text-xs text-gray-500 tracking-widest mb-3" style={{ fontFamily: "var(--font-mono)" }}>// ทุกคำถามเสร็จสิ้น</p>
         <div className="relative w-28 h-28 mx-auto mb-4">
           <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-            <circle cx="50" cy="50" r="40" fill="none" stroke={pct >= 75 ? "#bf00ff" : pct >= 50 ? "#4ade80" : "#fb923c"}
+            <circle cx="50" cy="50" r="40" fill="none" stroke={pct >= 75 ? "#c084fc" : pct >= 50 ? "#4ade80" : "#fb923c"}
               strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 251} 251`}
               style={{ transition: "stroke-dasharray 1.4s ease", filter: "drop-shadow(0 0 6px currentColor)" }} />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-2xl font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{pct}%</div>
-            <div className="text-xs text-gray-500" style={{ fontFamily: "var(--font-mono)" }}>SCORE</div>
+            <p className="text-2xl font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{pct}%</p>
+            <p className="text-xs text-gray-500" style={{ fontFamily: "var(--font-mono)" }}>SCORE</p>
           </div>
         </div>
-        <div className="text-lg font-black text-white mb-1" style={{ fontFamily: "var(--font-orbitron)" }}>
-          {pct >= 88 ? "NEURAL MASTER!" : pct >= 73 ? "DEEP LEARNER" : pct >= 55 ? "NETWORK BUILDER" : "KEEP TRAINING!"}
-        </div>
+        <p className="text-lg font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
+          {pct >= 88 ? "LEGENDARY!" : pct >= 73 ? "EXPERT!" : pct >= 55 ? "ADVANCED!" : "KEEP GOING!"}
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card rounded-xl p-4 border border-yellow-500/20 text-center">
-          <div className="text-2xl mb-1">⚡</div>
-          <div className="text-xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{totalXP}</div>
-          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</div>
+          <p className="text-2xl mb-1">⚡</p>
+          <p className="text-xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{totalXP}</p>
+          <p className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>XP EARNED</p>
         </div>
         <div className="glass-card rounded-xl p-4 border border-purple-500/20 text-center">
-          <div className="text-2xl mb-1">💎</div>
-          <div className="text-xl font-black text-purple-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{Math.round(totalXP * 0.2)}</div>
-          <div className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CREDITS</div>
+          <p className="text-2xl mb-1">💎</p>
+          <p className="text-xl font-black text-purple-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{Math.round(totalXP * 0.2)}</p>
+          <p className="text-xs text-gray-500 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>CREDITS</p>
         </div>
       </div>
-      <button onClick={onClaim} className="w-full btn-neon-pink py-4 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ CLAIM REWARDS</button>
+      <button onClick={onClaim} className="w-full btn-neon-pink py-4 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ รับรางวัล</button>
     </div>
   );
 }
@@ -399,30 +446,30 @@ function ResultScreen({ totalXP, onClaim }: { totalXP: number; onClaim: () => vo
 function CompleteScreen({ totalXP }: { totalXP: number }) {
   return (
     <div className="w-full max-w-lg mx-auto text-center space-y-6">
-      <div className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// MISSION_DEBRIEF</div>
+      <p className="text-xs tracking-widest text-purple-400" style={{ fontFamily: "var(--font-mono)" }}>// MISSION_DEBRIEF</p>
       <h2 className="text-3xl font-black" style={{ fontFamily: "var(--font-orbitron)" }}>
         <span className="neon-text-cyan">MISSION</span><br /><span className="neon-text-pink">ACCOMPLISHED</span>
       </h2>
-      <p className="text-gray-400 text-sm leading-relaxed">คุณสำเร็จภารกิจ <span className="text-white font-bold">Neural Network Basics</span> แล้ว! ตอนนี้คุณเข้าใจสมองของ AI จากทั้งมุมมองชีวิตจริงและเทคนิค</p>
+      <p className="text-gray-400 text-sm leading-relaxed">คุณสำเร็จภารกิจ <span className="text-white font-bold">Neural Network</span> แล้ว — ตอนนี้คุณเข้าใจรากฐานของ Deep Learning แล้ว!</p>
       <div className="glass-card rounded-2xl p-5 text-left space-y-3">
-        <div className="text-xs font-bold tracking-widest text-gray-400 mb-3" style={{ fontFamily: "var(--font-orbitron)" }}>SKILLS ACQUIRED:</div>
+        <p className="text-xs font-bold tracking-widest text-gray-400 mb-3" style={{ fontFamily: "var(--font-orbitron)" }}>SKILLS ACQUIRED:</p>
         {[
-          { icon: "🔗", skill: "Neural Architecture", desc: "เข้าใจโครงสร้าง neurons, layers, weights" },
+          { icon: "🧠", skill: "Neural Architecture", desc: "เข้าใจโครงสร้าง Neural Network และ layer" },
           { icon: "⚡", skill: "Activation Functions", desc: "รู้จัก ReLU, Sigmoid และ non-linearity" },
-          { icon: "🔄", skill: "Backpropagation", desc: "เข้าใจกระบวนการ training และ gradient descent" },
+          { icon: "🔄", skill: "Backpropagation", desc: "เข้าใจกระบวนการเรียนรู้จาก error" },
         ].map(item => (
           <div key={item.skill} className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
             <span className="text-lg shrink-0">{item.icon}</span>
             <div>
-              <div className="text-xs font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-orbitron)" }}>{item.skill}</div>
-              <div className="text-xs text-gray-500">{item.desc}</div>
+              <p className="text-xs font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-orbitron)" }}>{item.skill}</p>
+              <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
           </div>
         ))}
       </div>
       <div className="flex flex-col gap-3">
-        <Link href="/dashboard" className="btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>← BACK TO HQ</Link>
-        <Link href="/missions/social-post" className="btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>▶ PLAY: SOCIAL AI AGENT →</Link>
+        <Link href="/dashboard" className="btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>← กลับ HQ</Link>
+        <Link href="/missions/social-post" className="btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center" style={{ fontFamily: "var(--font-orbitron)" }}>ภารกิจถัดไป: SOCIAL POST →</Link>
       </div>
     </div>
   );
@@ -451,40 +498,36 @@ export default function NeuralNetworkMissionPage() {
       <Navbar />
       {showReward && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="glass-card rounded-3xl p-8 max-w-sm w-full text-center border border-purple-500/30" style={{ boxShadow: "0 0 60px rgba(191,0,255,0.15)" }}>
-            <div className="text-6xl mb-4" style={{ animation: "float 3s ease-in-out infinite" }}>🔗</div>
-            <div className="text-xs tracking-widest text-purple-400 mb-2" style={{ fontFamily: "var(--font-mono)" }}>MISSION COMPLETE!</div>
-            <div className="text-2xl font-black text-white mb-5" style={{ fontFamily: "var(--font-orbitron)" }}>NEURAL NETWORK<br /><span className="neon-text-pink">CLEARED</span></div>
+          <div className="glass-card rounded-3xl p-8 max-w-sm w-full text-center border border-purple-500/30" style={{ boxShadow: "0 0 60px rgba(192,132,252,0.2)" }}>
+            <p className="text-6xl mb-4" style={{ animation: "float 3s ease-in-out infinite" }}>🧬</p>
+            <p className="text-xs tracking-widest text-purple-400 mb-2" style={{ fontFamily: "var(--font-mono)" }}>MISSION COMPLETE!</p>
+            <p className="text-2xl font-black text-white mb-5" style={{ fontFamily: "var(--font-orbitron)" }}>NEURAL NETWORK<br /><span className="neon-text-pink">CLEARED</span></p>
             <div className="space-y-3 mb-5">
               <div className="flex justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                 <span className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>⚡ XP EARNED</span>
                 <span className="text-xl font-black text-yellow-400" style={{ fontFamily: "var(--font-orbitron)" }}>+{totalXP}</span>
               </div>
-              <div className="flex items-center gap-2 justify-center p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20">
-                <span>🔓</span>
-                <span className="text-xs text-pink-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>UNLOCKED: SOCIAL AI AGENT</span>
-              </div>
             </div>
-            <button onClick={() => { setShowReward(false); setPhase("complete"); }} className="w-full btn-neon-pink py-3 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ CONTINUE</button>
+            <button onClick={() => { setShowReward(false); setPhase("complete"); }} className="w-full btn-neon-pink py-3 text-sm font-bold tracking-widest rounded-xl" style={{ fontFamily: "var(--font-orbitron)" }}>▶ ต่อไป</button>
           </div>
         </div>
       )}
       <div className="pt-20 pb-12 px-4">
         <div className="max-w-lg mx-auto mb-6">
-          <div className="glass-card rounded-2xl p-4 border border-purple-500/20">
+          <div className="glass-card rounded-2xl p-4 border border-purple-500/15">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-xl">{MISSION.icon}</div>
                 <div>
-                  <div className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>{MISSION.code} • {MISSION.difficulty}</div>
-                  <div className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{MISSION.title}</div>
+                  <p className="text-xs text-purple-400 tracking-widest" style={{ fontFamily: "var(--font-mono)" }}>{MISSION.code} • {MISSION.difficulty}</p>
+                  <p className="text-sm font-black text-white" style={{ fontFamily: "var(--font-orbitron)" }}>{MISSION.title}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs" style={{ fontFamily: "var(--font-mono)" }}>
                 <span className="text-yellow-400">⚡ {MISSION.xpPerChallenge * CHALLENGES.length} XP</span>
                 <span className={`px-2 py-1 rounded-lg tracking-widest ${phase === "briefing" ? "bg-gray-800 text-gray-500" : phase === "challenge" ? "bg-purple-500/15 text-purple-400 border border-purple-500/30" : phase === "result" ? "bg-pink-500/15 text-pink-400 border border-pink-500/30" : "bg-green-500/15 text-green-400 border border-green-500/30"}`}>
                   {phase === "briefing" && "BRIEFING"}
-                  {phase === "challenge" && `● C${cIdx + 1}/${CHALLENGES.length}`}
+                  {phase === "challenge" && `● Q${cIdx + 1}/${CHALLENGES.length}`}
                   {phase === "result" && "RESULTS"}
                   {phase === "complete" && "✓ DONE"}
                 </span>
@@ -494,7 +537,7 @@ export default function NeuralNetworkMissionPage() {
         </div>
         <div className="flex flex-col items-center">
           {phase === "briefing" && <div className="w-full flex flex-col items-center justify-center min-h-[60vh]"><DialogueBox d={NPC_DIALOGUE[dlgIdx]} onNext={handleNextDlg} idx={dlgIdx} total={NPC_DIALOGUE.length} /></div>}
-          {phase === "challenge" && <DualPartChallenge key={cIdx} ch={CHALLENGES[cIdx]} cIdx={cIdx} total={CHALLENGES.length} onComplete={handleChallengeComplete} />}
+          {phase === "challenge" && <ChallengeCard key={cIdx} ch={CHALLENGES[cIdx]} cIdx={cIdx} total={CHALLENGES.length} onComplete={handleChallengeComplete} />}
           {phase === "result" && <ResultScreen totalXP={totalXP} onClaim={() => setShowReward(true)} />}
           {phase === "complete" && <CompleteScreen totalXP={totalXP} />}
         </div>
