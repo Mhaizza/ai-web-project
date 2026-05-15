@@ -112,7 +112,7 @@ export default function AICompanion() {
                   <div
                     key={i}
                     className="w-2 h-2 rounded-full bg-purple-400"
-                    style={{ animation: `glowPulse 1s ease-in-out infinite ${i * 0.2}s` }}
+                    style={{ animation: `glowPulse 1s ease-in-out ${i * 0.2}s infinite` }}
                   />
                 ))}
               </div>
