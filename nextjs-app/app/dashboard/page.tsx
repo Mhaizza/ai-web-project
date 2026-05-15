@@ -4,6 +4,7 @@ import DailyQuests from "@/components/dashboard/DailyQuests";
 import AICompanion from "@/components/dashboard/AICompanion";
 import QuickMissions from "@/components/dashboard/QuickMissions";
 import Link from "next/link";
+import { DAILY_QUESTS } from "@/lib/dailyQuestsData";
 
 function WorldMapTeaser() {
   const WORLDS = [
@@ -123,7 +124,7 @@ export default function DashboardPage() {
                 ยินดีต้อนรับกลับมา, <span className="neon-text-cyan">AGENT_001</span>
               </h1>
               <p className="text-sm text-gray-400">
-                คุณมี <span className="text-yellow-400 font-bold">3 daily quests</span> รอดำเนินการ และ{" "}
+                คุณมี <span className="text-yellow-400 font-bold">{DAILY_QUESTS.filter(q => !q.completed).length} daily quests</span> รอดำเนินการ และ{" "}
                 <span className="text-pink-400 font-bold">1 mission</span> กำลังดำเนินอยู่
               </p>
             </div>
