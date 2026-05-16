@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Share_Tech_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const orbitron = Orbitron({
@@ -31,6 +32,7 @@ export default function RootLayout({
         className={`${orbitron.variable} ${shareTechMono.variable} antialiased`}
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
