@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
   { label: "HOME", href: "/" },
+  { label: "HEROES", href: "/heroes" },
   { label: "DASHBOARD", href: "/dashboard" },
   { label: "MISSIONS", href: "#" },
-  { label: "LEADERBOARD", href: "#" },
 ];
 
 export default function Navbar() {

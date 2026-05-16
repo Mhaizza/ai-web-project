@@ -1,6 +1,8 @@
 import React from "react";
 import Link from "next/link";
 
+// ─── Types ─────────────────────────────────────────────────────────────────
+
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "BOSS";
 
 interface Mission {
@@ -17,13 +19,14 @@ interface Mission {
   href?: string;
 }
 
+// ─── Data ──────────────────────────────────────────────────────────────────
+
 const MISSIONS: Mission[] = [
   {
     id: "m1",
     code: "M-001",
     title: "What is AI?",
-    description:
-      "ค้นพบโลกของ AI — เรียนรู้พื้นฐานและแนวคิดหลักที่จะเปลี่ยนโลก",
+    description: "ค้นพบโลกของ AI — เรียนรู้พื้นฐานและแนวคิดหลักที่จะเปลี่ยนโลก",
     xp: 100,
     difficulty: "EASY",
     tags: ["AI BASICS", "INTRO"],
@@ -36,8 +39,7 @@ const MISSIONS: Mission[] = [
     id: "m2",
     code: "M-002",
     title: "Machine Learning 101",
-    description:
-      "เข้าใจวิธีที่ Machine Learning ทำงาน ผ่านตัวอย่างจริงที่เข้าใจได้ง่าย",
+    description: "เข้าใจวิธีที่ Machine Learning ทำงาน ผ่านตัวอย่างจริงที่เข้าใจได้ง่าย",
     xp: 200,
     difficulty: "EASY",
     tags: ["ML", "TRAINING DATA"],
@@ -78,7 +80,7 @@ const MISSIONS: Mission[] = [
     title: "AI Ethics Protocol",
     description: "ทำความเข้าใจจริยธรรม bias และความรับผิดชอบในยุค AI",
     xp: 400,
-    difficulty: "MEDIUM",
+    difficulty: "HARD",
     tags: ["ETHICS", "BIAS", "SAFETY"],
     locked: true,
     completed: false,
@@ -88,8 +90,7 @@ const MISSIONS: Mission[] = [
     id: "m6",
     code: "BOSS-01",
     title: "AI BOSS: Build a Chatbot",
-    description:
-      "สร้าง AI Chatbot ของคุณเองตั้งแต่ต้น — การทดสอบขั้นสูงสุดของทักษะคุณ",
+    description: "สร้าง AI Chatbot ของคุณเองตั้งแต่ต้น — การทดสอบขั้นสูงสุดของทักษะคุณ",
     xp: 1000,
     difficulty: "BOSS",
     tags: ["PROJECT", "CHATBOT", "FINAL"],
@@ -99,191 +100,293 @@ const MISSIONS: Mission[] = [
   },
 ];
 
-const DIFFICULTY_STYLES: Record<
-  Difficulty,
-  { text: string; bg: string; border: string; glow: string }
-> = {
-  EASY: {
-    text: "text-green-400",
-    bg: "bg-green-400/10",
-    border: "border-green-400/30",
-    glow: "shadow-green-400/20",
-  },
-  MEDIUM: {
-    text: "text-yellow-400",
-    bg: "bg-yellow-400/10",
-    border: "border-yellow-400/30",
-    glow: "shadow-yellow-400/20",
-  },
-  HARD: {
-    text: "text-orange-400",
-    bg: "bg-orange-400/10",
-    border: "border-orange-400/30",
-    glow: "shadow-orange-400/20",
-  },
-  BOSS: {
-    text: "text-pink-400",
-    bg: "bg-pink-400/10",
-    border: "border-pink-500/50",
-    glow: "shadow-pink-500/30",
-  },
+// ─── Difficulty config ──────────────────────────────────────────────────────
+
+const DIFF: Record<Difficulty, { color: string; glow: string; dim: string; label: string }> = {
+  EASY:   { color: "#4ade80", glow: "rgba(74,222,128,0.5)",   dim: "rgba(74,222,128,0.07)",   label: "EASY" },
+  MEDIUM: { color: "#facc15", glow: "rgba(250,204,21,0.5)",   dim: "rgba(250,204,21,0.07)",   label: "MEDIUM" },
+  HARD:   { color: "#fb923c", glow: "rgba(251,146,60,0.5)",   dim: "rgba(251,146,60,0.07)",   label: "HARD" },
+  BOSS:   { color: "#ff0080", glow: "rgba(255,0,128,0.6)",    dim: "rgba(255,0,128,0.08)",    label: "★ BOSS" },
 };
 
+// ─── MissionCard ───────────────────────────────────────────────────────────
+
 function MissionCard({ mission }: { mission: Mission }) {
-  const diff = DIFFICULTY_STYLES[mission.difficulty];
+  const d = DIFF[mission.difficulty];
+  const isBoss = mission.difficulty === "BOSS";
 
   return (
     <div
-      className={`
-        glass-card rounded-xl p-5 relative overflow-hidden group transition-all duration-300
-        ${mission.locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:-translate-y-1"}
-        ${mission.difficulty === "BOSS" ? `border ${diff.border} shadow-lg ${diff.glow}` : ""}
-        ${mission.completed ? "border border-green-500/20" : ""}
-      `}
+      className={`relative rounded-2xl overflow-hidden transition-all duration-300 group ${
+        mission.locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:-translate-y-1"
+      }`}
+      style={{
+        background: `linear-gradient(140deg, ${d.dim} 0%, rgba(5,5,16,0.97) 60%)`,
+        border: `1px solid ${mission.locked ? "rgba(255,255,255,0.07)" : d.color + "30"}`,
+        boxShadow: mission.locked
+          ? "none"
+          : mission.completed
+          ? "0 0 16px rgba(74,222,128,0.1)"
+          : isBoss
+          ? `0 0 30px ${d.glow}22, 0 0 60px ${d.glow}11`
+          : `0 0 16px ${d.dim}`,
+      }}
     >
-      {/* Corner accent */}
-      <div className={`absolute top-0 left-0 w-8 h-8 ${diff.bg} clip-corner pointer-events-none`} />
-
-      {/* Hover shimmer */}
-      {!mission.locked && (
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/0 via-transparent to-transparent opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
+      {/* Completed overlay stripe */}
+      {mission.completed && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(140deg, rgba(74,222,128,0.06) 0%, transparent 50%)",
+          }}
+        />
       )}
 
-      <div className="flex items-start gap-4">
-        {/* Icon */}
-        <div
-          className={`w-12 h-12 shrink-0 rounded-lg flex items-center justify-center text-2xl
-          ${mission.completed ? "bg-green-500/15 border border-green-500/30" : `${diff.bg} border ${diff.border}`}
-        `}
-        >
-          {mission.locked ? "🔒" : mission.icon}
-        </div>
+      {/* BOSS: scan-line effect */}
+      {isBoss && !mission.locked && (
+        <div className="absolute inset-0 scan-line-anim pointer-events-none opacity-50" />
+      )}
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span
-              className="text-xs text-gray-600 tracking-widest"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {mission.code}
-            </span>
-            <span
-              className={`text-xs px-2 py-0.5 rounded ${diff.bg} ${diff.text} ${diff.border} border tracking-widest`}
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {mission.difficulty}
-            </span>
-            {mission.completed && (
-              <span
-                className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30 tracking-widest"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                ✓ DONE
-              </span>
+      {/* BOSS: diagonal shimmer */}
+      {isBoss && !mission.locked && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-10"
+          style={{
+            background: `repeating-linear-gradient(45deg, transparent, transparent 10px, ${d.color}11 10px, ${d.color}11 11px)`,
+          }}
+        />
+      )}
+
+      {/* Hover glow */}
+      {!mission.locked && (
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at top left, ${d.dim}, transparent 60%)`,
+          }}
+        />
+      )}
+
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start gap-4">
+
+          {/* Icon bubble */}
+          <div
+            className="w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-2xl relative"
+            style={{
+              background: mission.completed
+                ? "rgba(74,222,128,0.12)"
+                : `${d.dim}`,
+              border: `1px solid ${mission.completed ? "rgba(74,222,128,0.3)" : d.color + "30"}`,
+              boxShadow: isBoss && !mission.locked ? `0 0 14px ${d.glow}44` : "none",
+            }}
+          >
+            {mission.locked ? "🔒" : mission.icon}
+            {isBoss && !mission.locked && (
+              <div
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-glow-pulse"
+                style={{ background: d.color, boxShadow: `0 0 6px ${d.color}` }}
+              />
             )}
           </div>
 
-          <h3
-            className={`font-bold mb-1 text-sm sm:text-base ${mission.completed ? "text-gray-400 line-through" : "text-white"}`}
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            {mission.title}
-          </h3>
+          {/* Content */}
+          <div className="flex-1 min-w-0">
 
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-            {mission.description}
-          </p>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {mission.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700/50 tracking-widest"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                {tag}
+            {/* Header badges */}
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-[9px] text-white/25 tracking-widest font-mono">
+                {mission.code}
               </span>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-yellow-400 text-sm">⚡</span>
               <span
-                className="text-xs font-bold text-yellow-400"
-                style={{ fontFamily: "var(--font-mono)" }}
+                className="text-[9px] px-2 py-0.5 rounded-full border font-bold tracking-widest"
+                style={{
+                  color: d.color,
+                  borderColor: `${d.color}40`,
+                  background: `${d.color}12`,
+                }}
               >
-                +{mission.xp} XP
+                {d.label}
               </span>
+              {mission.completed && (
+                <span
+                  className="text-[9px] px-2 py-0.5 rounded-full border font-bold tracking-widest"
+                  style={{
+                    color: "#4ade80",
+                    borderColor: "rgba(74,222,128,0.35)",
+                    background: "rgba(74,222,128,0.1)",
+                  }}
+                >
+                  ✓ DONE
+                </span>
+              )}
             </div>
-            {!mission.locked && !mission.completed && (
-              mission.href ? (
+
+            {/* Title */}
+            <h3
+              className="font-black text-sm sm:text-base mb-1.5 tracking-wide"
+              style={{
+                color: mission.completed
+                  ? "rgba(255,255,255,0.3)"
+                  : isBoss
+                  ? d.color
+                  : "#fff",
+                textDecoration: mission.completed ? "line-through" : "none",
+                textShadow:
+                  isBoss && !mission.locked ? `0 0 16px ${d.color}66` : "none",
+              }}
+            >
+              {mission.title}
+            </h3>
+
+            {/* Description */}
+            <p className="text-[11px] text-white/38 mb-3 leading-relaxed">
+              {mission.description}
+            </p>
+
+            {/* Tags */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {mission.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[8px] px-2 py-0.5 rounded-full font-bold tracking-widest"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.35)",
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            {/* Footer: XP + action */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: "#facc15", fontSize: "13px" }}>⚡</span>
+                <span
+                  className="text-[10px] font-black tracking-widest"
+                  style={{ color: "#facc15" }}
+                >
+                  +{mission.xp} XP
+                </span>
+              </div>
+
+              {!mission.locked && !mission.completed && mission.href && (
                 <Link
                   href={mission.href}
-                  className="text-xs px-3 py-1.5 rounded border border-pink-500/50 text-pink-400 hover:bg-pink-400/10 transition-colors tracking-widest inline-block"
-                  style={{ fontFamily: "var(--font-orbitron)" }}
+                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+                  style={{
+                    color: d.color,
+                    borderColor: `${d.color}40`,
+                    background: `${d.color}10`,
+                  }}
                 >
-                  ▶ START →
+                  ▶ START
                 </Link>
-              ) : (
+              )}
+
+              {!mission.locked && !mission.completed && !mission.href && (
                 <button
-                  className="text-xs px-3 py-1.5 rounded border border-cyan-500/40 text-cyan-400 hover:bg-cyan-400/10 transition-colors tracking-widest"
-                  style={{ fontFamily: "var(--font-orbitron)" }}
+                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+                  style={{
+                    color: "rgba(255,255,255,0.3)",
+                    borderColor: "rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.04)",
+                  }}
                 >
-                  START →
+                  COMING SOON
                 </button>
-              )
-            )}
-            {mission.completed && mission.href && (
-              <Link
-                href={mission.href}
-                className="text-xs px-3 py-1.5 rounded border border-green-500/30 text-green-400 hover:bg-green-400/10 transition-colors tracking-widest inline-block"
-                style={{ fontFamily: "var(--font-orbitron)" }}
-              >
-                🔄 REPLAY
-              </Link>
-            )}
+              )}
+
+              {mission.completed && mission.href && (
+                <Link
+                  href={mission.href}
+                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+                  style={{
+                    color: "#4ade80",
+                    borderColor: "rgba(74,222,128,0.3)",
+                    background: "rgba(74,222,128,0.08)",
+                  }}
+                >
+                  🔄 REPLAY
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* BOSS special effect */}
-      {mission.difficulty === "BOSS" && !mission.locked && (
-        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-pink-500 animate-glow-pulse" />
-      )}
     </div>
   );
 }
 
+// ─── Main Section ───────────────────────────────────────────────────────────
+
 export default function MissionsSection() {
+  const available = MISSIONS.filter((m) => !m.locked).length;
+  const completed = MISSIONS.filter((m) => m.completed).length;
+
   return (
     <section className="py-20 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
+      <div className="max-w-2xl mx-auto">
+
+        {/* Section header */}
+        <div className="text-center mb-10">
           <div
-            className="text-xs tracking-widest text-pink-400 mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
+            className="text-[9px] tracking-[0.3em] font-bold mb-2 animate-glow-pulse"
+            style={{ color: "#ff0080" }}
           >
             // MISSION_BOARD.sys
           </div>
           <h2
-            className="text-3xl sm:text-4xl font-black neon-text-pink mb-4"
-            style={{ fontFamily: "var(--font-orbitron)" }}
+            className="text-3xl sm:text-4xl font-black tracking-wider mb-3"
+            style={{ color: "#fff", textShadow: "0 0 30px rgba(255,0,128,0.4)" }}
           >
-            ACTIVE MISSIONS
+            ACTIVE <span style={{ color: "#ff0080" }}>MISSIONS</span>
           </h2>
-          <p className="text-gray-400 text-sm max-w-md mx-auto">
+          <p className="text-white/35 text-sm mb-4">
             เลือกภารกิจ เรียนรู้ทักษะ AI และสะสม XP เพื่ออัพเลเวลตัวเอง
           </p>
+
+          {/* Mission status pills */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <span
+              className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
+              style={{
+                color: "#00f5ff",
+                background: "rgba(0,245,255,0.1)",
+                border: "1px solid rgba(0,245,255,0.25)",
+              }}
+            >
+              {available} AVAILABLE
+            </span>
+            <span
+              className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
+              style={{
+                color: "#4ade80",
+                background: "rgba(74,222,128,0.1)",
+                border: "1px solid rgba(74,222,128,0.25)",
+              }}
+            >
+              {completed} COMPLETED
+            </span>
+            <span
+              className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
+              style={{
+                color: "rgba(255,255,255,0.3)",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {MISSIONS.length - available} LOCKED
+            </span>
+          </div>
         </div>
 
         {/* Mission grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {MISSIONS.map((mission) => (
             <MissionCard key={mission.id} mission={mission} />
           ))}
@@ -292,8 +395,12 @@ export default function MissionsSection() {
         {/* View all button */}
         <div className="text-center mt-8">
           <button
-            className="btn-neon-cyan px-8 py-3 text-xs font-bold tracking-widest rounded-lg"
-            style={{ fontFamily: "var(--font-orbitron)" }}
+            className="px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.4)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
           >
             VIEW ALL MISSIONS →
           </button>
