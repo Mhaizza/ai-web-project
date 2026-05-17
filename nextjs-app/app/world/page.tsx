@@ -4,7 +4,12 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { useGameStore } from "@/store/gameStore";
-import { WORLDS, missionsInWorld, isMissionUnlocked } from "@/lib/missions";
+import {
+  WORLDS,
+  missionsInWorld,
+  isMissionUnlocked,
+  isWorldUnlocked,
+} from "@/lib/missions";
 import { levelForXp } from "@/lib/level";
 import type { World, Mission } from "@/lib/types";
 
@@ -28,7 +33,9 @@ function WorldCard({
   const completedCount = missions.filter((m) =>
     completedIds.includes(m.id)
   ).length;
-  const worldUnlocked = playerLevel >= world.unlockLevel;
+  const worldUnlocked = isWorldUnlocked(world, playerLevel, completedIds);
+  const unlockedByBoss =
+    worldUnlocked && playerLevel < world.unlockLevel;
 
   return (
     <motion.div
@@ -105,6 +112,19 @@ function WorldCard({
             style={{ fontFamily: "var(--font-mono)" }}
           >
             🔒 UNLOCKS AT LVL {world.unlockLevel}
+            {world.id === "machine-mind" && (
+              <span className="block mt-0.5 text-pink-400/80">
+                หรือเอาชนะ BOSS-01 ROGUE.AI ใน AI ORIGINS
+              </span>
+            )}
+          </p>
+        )}
+        {unlockedByBoss && (
+          <p
+            className="mt-2 text-xs tracking-widest text-pink-400"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            ★ UNLOCKED VIA BOSS VICTORY
           </p>
         )}
       </div>
@@ -266,7 +286,9 @@ export default function WorldPage() {
                 style={{ fontFamily: "var(--font-orbitron)" }}
               >
                 {hydrated
-                  ? WORLDS.filter((w) => playerLevel >= w.unlockLevel).length
+                  ? WORLDS.filter((w) =>
+                      isWorldUnlocked(w, playerLevel, completedIds)
+                    ).length
                   : "—"}
                 /{WORLDS.length}
               </div>

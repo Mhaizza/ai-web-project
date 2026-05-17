@@ -1,139 +1,90 @@
-import React from "react";
+"use client";
+
 import Link from "next/link";
+import { useGameStore } from "@/store/gameStore";
+import {
+  MISSIONS,
+  isMissionUnlocked,
+  missionsInWorld,
+} from "@/lib/missions";
+import type { Mission, MissionDifficulty } from "@/lib/types";
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+// ─── Difficulty palette ────────────────────────────────────────────────────
 
-type Difficulty = "EASY" | "MEDIUM" | "HARD" | "BOSS";
-
-interface Mission {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  xp: number;
-  difficulty: Difficulty;
-  tags: string[];
-  locked: boolean;
-  completed: boolean;
-  icon: string;
-  href?: string;
-}
-
-// ─── Data ──────────────────────────────────────────────────────────────────
-
-const MISSIONS: Mission[] = [
-  {
-    id: "m1",
-    code: "M-001",
-    title: "What is AI?",
-    description: "ค้นพบโลกของ AI — เรียนรู้พื้นฐานและแนวคิดหลักที่จะเปลี่ยนโลก",
-    xp: 100,
-    difficulty: "EASY",
-    tags: ["AI BASICS", "INTRO"],
-    locked: false,
-    completed: true,
-    icon: "🧠",
-    href: "/missions/what-is-ai",
+const DIFF: Record<
+  MissionDifficulty,
+  { color: string; glow: string; dim: string; label: string }
+> = {
+  EASY: {
+    color: "#4ade80",
+    glow: "rgba(74,222,128,0.5)",
+    dim: "rgba(74,222,128,0.07)",
+    label: "EASY",
   },
-  {
-    id: "m2",
-    code: "M-002",
-    title: "Machine Learning 101",
-    description: "เข้าใจวิธีที่ Machine Learning ทำงาน ผ่านตัวอย่างจริงที่เข้าใจได้ง่าย",
-    xp: 200,
-    difficulty: "EASY",
-    tags: ["ML", "TRAINING DATA"],
-    locked: false,
-    completed: false,
-    icon: "⚙️",
-    href: "/missions/ml-101",
+  MEDIUM: {
+    color: "#facc15",
+    glow: "rgba(250,204,21,0.5)",
+    dim: "rgba(250,204,21,0.07)",
+    label: "MEDIUM",
   },
-  {
-    id: "m3",
-    code: "M-003",
-    title: "Neural Network Basics",
-    description: "สำรวจโครงสร้าง Neural Network และเข้าใจว่า AI 'เรียนรู้' ได้อย่างไร",
-    xp: 350,
-    difficulty: "MEDIUM",
-    tags: ["NEURAL NET", "DEEP LEARNING"],
-    locked: false,
-    completed: false,
-    icon: "🔗",
-    href: "/missions/neural-network",
+  HARD: {
+    color: "#fb923c",
+    glow: "rgba(251,146,60,0.5)",
+    dim: "rgba(251,146,60,0.07)",
+    label: "HARD",
   },
-  {
-    id: "m4",
-    code: "M-004",
-    title: "Social AI Agent",
-    description: "เขียน prompt ให้ AI สร้างโพสต์โซเชียลมีเดีย — ภารกิจแรกที่เล่นได้!",
-    xp: 500,
-    difficulty: "MEDIUM",
-    tags: ["LLM", "PROMPTS", "PLAYABLE"],
-    locked: false,
-    completed: false,
-    icon: "✍️",
-    href: "/missions/social-post",
+  BOSS: {
+    color: "#ff0080",
+    glow: "rgba(255,0,128,0.6)",
+    dim: "rgba(255,0,128,0.08)",
+    label: "★ BOSS",
   },
-  {
-    id: "m5",
-    code: "M-005",
-    title: "AI Ethics Protocol",
-    description: "ทำความเข้าใจจริยธรรม bias และความรับผิดชอบในยุค AI",
-    xp: 400,
-    difficulty: "HARD",
-    tags: ["ETHICS", "BIAS", "SAFETY"],
-    locked: true,
-    completed: false,
-    icon: "⚖️",
-  },
-  {
-    id: "m6",
-    code: "BOSS-01",
-    title: "AI BOSS: Build a Chatbot",
-    description: "สร้าง AI Chatbot ของคุณเองตั้งแต่ต้น — การทดสอบขั้นสูงสุดของทักษะคุณ",
-    xp: 1000,
-    difficulty: "BOSS",
-    tags: ["PROJECT", "CHATBOT", "FINAL"],
-    locked: true,
-    completed: false,
-    icon: "👾",
-  },
-];
-
-// ─── Difficulty config ──────────────────────────────────────────────────────
-
-const DIFF: Record<Difficulty, { color: string; glow: string; dim: string; label: string }> = {
-  EASY:   { color: "#4ade80", glow: "rgba(74,222,128,0.5)",   dim: "rgba(74,222,128,0.07)",   label: "EASY" },
-  MEDIUM: { color: "#facc15", glow: "rgba(250,204,21,0.5)",   dim: "rgba(250,204,21,0.07)",   label: "MEDIUM" },
-  HARD:   { color: "#fb923c", glow: "rgba(251,146,60,0.5)",   dim: "rgba(251,146,60,0.07)",   label: "HARD" },
-  BOSS:   { color: "#ff0080", glow: "rgba(255,0,128,0.6)",    dim: "rgba(255,0,128,0.08)",    label: "★ BOSS" },
 };
 
-// ─── MissionCard ───────────────────────────────────────────────────────────
+// ─── Card ──────────────────────────────────────────────────────────────────
 
-function MissionCard({ mission }: { mission: Mission }) {
+function MissionCard({
+  mission,
+  unlocked,
+  completed,
+  bossReady,
+}: {
+  mission: Mission;
+  unlocked: boolean;
+  completed: boolean;
+  bossReady: boolean;
+}) {
   const d = DIFF[mission.difficulty];
   const isBoss = mission.difficulty === "BOSS";
+  const locked = !unlocked;
 
-  return (
+  // Boss card is more visually prominent when ready to fight
+  const bossActive = isBoss && unlocked && !completed;
+
+  const card = (
     <div
       className={`relative rounded-2xl overflow-hidden transition-all duration-300 group ${
-        mission.locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:-translate-y-1"
+        locked
+          ? "opacity-50 cursor-not-allowed"
+          : "cursor-pointer hover:-translate-y-1"
       }`}
       style={{
         background: `linear-gradient(140deg, ${d.dim} 0%, rgba(5,5,16,0.97) 60%)`,
-        border: `1px solid ${mission.locked ? "rgba(255,255,255,0.07)" : d.color + "30"}`,
-        boxShadow: mission.locked
+        border: `1px solid ${
+          locked ? "rgba(255,255,255,0.07)" : d.color + (bossActive ? "70" : "30")
+        }`,
+        boxShadow: locked
           ? "none"
-          : mission.completed
+          : completed
           ? "0 0 16px rgba(74,222,128,0.1)"
+          : bossActive
+          ? `0 0 30px ${d.glow}, 0 0 60px ${d.glow}55`
           : isBoss
-          ? `0 0 30px ${d.glow}22, 0 0 60px ${d.glow}11`
+          ? `0 0 20px ${d.glow}33`
           : `0 0 16px ${d.dim}`,
       }}
     >
-      {/* Completed overlay stripe */}
-      {mission.completed && (
+      {completed && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -143,23 +94,19 @@ function MissionCard({ mission }: { mission: Mission }) {
         />
       )}
 
-      {/* BOSS: scan-line effect */}
-      {isBoss && !mission.locked && (
-        <div className="absolute inset-0 scan-line-anim pointer-events-none opacity-50" />
+      {bossActive && (
+        <>
+          <div className="absolute inset-0 scan-line-anim pointer-events-none opacity-50" />
+          <div
+            className="absolute inset-0 pointer-events-none opacity-20"
+            style={{
+              background: `repeating-linear-gradient(45deg, transparent, transparent 10px, ${d.color}22 10px, ${d.color}22 11px)`,
+            }}
+          />
+        </>
       )}
 
-      {/* BOSS: diagonal shimmer */}
-      {isBoss && !mission.locked && (
-        <div
-          className="absolute inset-0 pointer-events-none opacity-10"
-          style={{
-            background: `repeating-linear-gradient(45deg, transparent, transparent 10px, ${d.color}11 10px, ${d.color}11 11px)`,
-          }}
-        />
-      )}
-
-      {/* Hover glow */}
-      {!mission.locked && (
+      {!locked && (
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
           style={{
@@ -170,20 +117,18 @@ function MissionCard({ mission }: { mission: Mission }) {
 
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-4">
-
-          {/* Icon bubble */}
           <div
             className="w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-2xl relative"
             style={{
-              background: mission.completed
-                ? "rgba(74,222,128,0.12)"
-                : `${d.dim}`,
-              border: `1px solid ${mission.completed ? "rgba(74,222,128,0.3)" : d.color + "30"}`,
-              boxShadow: isBoss && !mission.locked ? `0 0 14px ${d.glow}44` : "none",
+              background: completed ? "rgba(74,222,128,0.12)" : d.dim,
+              border: `1px solid ${
+                completed ? "rgba(74,222,128,0.3)" : d.color + "30"
+              }`,
+              boxShadow: bossActive ? `0 0 14px ${d.glow}` : "none",
             }}
           >
-            {mission.locked ? "🔒" : mission.icon}
-            {isBoss && !mission.locked && (
+            {locked ? "🔒" : mission.icon}
+            {bossActive && (
               <div
                 className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-glow-pulse"
                 style={{ background: d.color, boxShadow: `0 0 6px ${d.color}` }}
@@ -191,10 +136,7 @@ function MissionCard({ mission }: { mission: Mission }) {
             )}
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
-
-            {/* Header badges */}
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="text-[9px] text-white/25 tracking-widest font-mono">
                 {mission.code}
@@ -209,7 +151,7 @@ function MissionCard({ mission }: { mission: Mission }) {
               >
                 {d.label}
               </span>
-              {mission.completed && (
+              {completed && (
                 <span
                   className="text-[9px] px-2 py-0.5 rounded-full border font-bold tracking-widest"
                   style={{
@@ -221,90 +163,77 @@ function MissionCard({ mission }: { mission: Mission }) {
                   ✓ DONE
                 </span>
               )}
+              {bossReady && bossActive && (
+                <span
+                  className="text-[9px] px-2 py-0.5 rounded-full border font-bold tracking-widest animate-glow-pulse"
+                  style={{
+                    color: d.color,
+                    borderColor: `${d.color}80`,
+                    background: `${d.color}22`,
+                  }}
+                >
+                  ⚠ READY
+                </span>
+              )}
             </div>
 
-            {/* Title */}
             <h3
               className="font-black text-sm sm:text-base mb-1.5 tracking-wide"
               style={{
-                color: mission.completed
+                color: completed
                   ? "rgba(255,255,255,0.3)"
                   : isBoss
                   ? d.color
                   : "#fff",
-                textDecoration: mission.completed ? "line-through" : "none",
-                textShadow:
-                  isBoss && !mission.locked ? `0 0 16px ${d.color}66` : "none",
+                textDecoration: completed ? "line-through" : "none",
+                textShadow: bossActive ? `0 0 16px ${d.color}88` : "none",
               }}
             >
               {mission.title}
             </h3>
 
-            {/* Description */}
             <p className="text-[11px] text-white/38 mb-3 leading-relaxed">
               {mission.description}
             </p>
 
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {mission.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-[8px] px-2 py-0.5 rounded-full font-bold tracking-widest"
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: "#facc15", fontSize: "13px" }}>⚡</span>
+                  <span
+                    className="text-[10px] font-black tracking-widest"
+                    style={{ color: "#facc15" }}
+                  >
+                    +{mission.reward.xp} XP
+                  </span>
+                </div>
+                <div
+                  className="text-[10px] font-bold tracking-widest"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "rgba(255,255,255,0.4)",
+                    fontFamily: "var(--font-mono)",
                   }}
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            {/* Footer: XP + action */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span style={{ color: "#facc15", fontSize: "13px" }}>⚡</span>
-                <span
-                  className="text-[10px] font-black tracking-widest"
-                  style={{ color: "#facc15" }}
-                >
-                  +{mission.xp} XP
-                </span>
+                  ⚡ {mission.energyCost}
+                </div>
               </div>
 
-              {!mission.locked && !mission.completed && mission.href && (
-                <Link
-                  href={mission.href}
-                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+              {!locked && !completed && (
+                <span
+                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95"
                   style={{
                     color: d.color,
                     borderColor: `${d.color}40`,
                     background: `${d.color}10`,
                   }}
                 >
-                  ▶ START
-                </Link>
+                  {bossActive ? "▶ ENTER BATTLE" : "▶ START"}
+                </span>
               )}
 
-              {!mission.locked && !mission.completed && !mission.href && (
-                <button
-                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
-                  style={{
-                    color: "rgba(255,255,255,0.3)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.04)",
-                  }}
-                >
-                  COMING SOON
-                </button>
-              )}
-
-              {mission.completed && mission.href && (
-                <Link
-                  href={mission.href}
-                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+              {completed && (
+                <span
+                  className="text-[10px] px-3 py-1.5 rounded-xl border font-bold tracking-widest transition-all duration-200 active:scale-95"
                   style={{
                     color: "#4ade80",
                     borderColor: "rgba(74,222,128,0.3)",
@@ -312,7 +241,7 @@ function MissionCard({ mission }: { mission: Mission }) {
                   }}
                 >
                   🔄 REPLAY
-                </Link>
+                </span>
               )}
             </div>
           </div>
@@ -320,19 +249,45 @@ function MissionCard({ mission }: { mission: Mission }) {
       </div>
     </div>
   );
+
+  if (locked) return card;
+  return (
+    <Link href={mission.href} className="block">
+      {card}
+    </Link>
+  );
 }
 
-// ─── Main Section ───────────────────────────────────────────────────────────
+// ─── Section ────────────────────────────────────────────────────────────────
 
 export default function MissionsSection() {
-  const available = MISSIONS.filter((m) => !m.locked).length;
-  const completed = MISSIONS.filter((m) => m.completed).length;
+  const completedIds = useGameStore((s) => s.completed);
+  const hydrated = useGameStore((s) => s.hydrated);
+
+  // For the landing page we showcase World 1 (AI ORIGINS) only — the closing
+  // loop the player will see most often. Other worlds are explored via /world.
+  const world1 = missionsInWorld("ai-origins");
+
+  // Pre-hydration: show "default" availability so SSR/CSR match without flash.
+  const visibleCompleted = hydrated ? completedIds : [];
+
+  // Boss is "ready" the moment all earlier missions in the world are done.
+  const boss = world1.find((m) => m.difficulty === "BOSS");
+  const bossReady =
+    !!boss && isMissionUnlocked(boss, visibleCompleted) && !visibleCompleted.includes(boss.id);
+
+  const totalAvailable = world1.filter((m) =>
+    isMissionUnlocked(m, visibleCompleted)
+  ).length;
+  const totalCompleted = world1.filter((m) =>
+    visibleCompleted.includes(m.id)
+  ).length;
+  const totalLocked = world1.length - totalAvailable;
+  const totalMissions = MISSIONS.length;
 
   return (
     <section className="py-20 px-4">
       <div className="max-w-2xl mx-auto">
-
-        {/* Section header */}
         <div className="text-center mb-10">
           <div
             className="text-[9px] tracking-[0.3em] font-bold mb-2 animate-glow-pulse"
@@ -350,7 +305,6 @@ export default function MissionsSection() {
             เลือกภารกิจ เรียนรู้ทักษะ AI และสะสม XP เพื่ออัพเลเวลตัวเอง
           </p>
 
-          {/* Mission status pills */}
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <span
               className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
@@ -360,7 +314,7 @@ export default function MissionsSection() {
                 border: "1px solid rgba(0,245,255,0.25)",
               }}
             >
-              {available} AVAILABLE
+              {totalAvailable} AVAILABLE
             </span>
             <span
               className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
@@ -370,7 +324,7 @@ export default function MissionsSection() {
                 border: "1px solid rgba(74,222,128,0.25)",
               }}
             >
-              {completed} COMPLETED
+              {totalCompleted} COMPLETED
             </span>
             <span
               className="text-[9px] px-3 py-1 rounded-full font-bold tracking-widest"
@@ -380,30 +334,64 @@ export default function MissionsSection() {
                 border: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              {MISSIONS.length - available} LOCKED
+              {totalLocked} LOCKED
             </span>
           </div>
+
+          {bossReady && (
+            <div
+              className="mt-6 inline-block px-5 py-3 rounded-2xl border-2 animate-glow-pulse"
+              style={{
+                borderColor: "rgba(255,0,128,0.6)",
+                background:
+                  "linear-gradient(135deg, rgba(255,0,128,0.18), rgba(191,0,255,0.08))",
+                boxShadow: "0 0 30px rgba(255,0,128,0.4)",
+              }}
+            >
+              <p
+                className="text-[10px] tracking-widest font-bold"
+                style={{ color: "#ff0080", fontFamily: "var(--font-mono)" }}
+              >
+                ⚠ BOSS THREAT DETECTED
+              </p>
+              <p
+                className="text-sm font-black text-white mt-0.5"
+                style={{ fontFamily: "var(--font-orbitron)" }}
+              >
+                ROGUE.AI พร้อมการต่อสู้ — เข้าโจมตีได้แล้ว!
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Mission grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {MISSIONS.map((mission) => (
-            <MissionCard key={mission.id} mission={mission} />
-          ))}
+          {world1.map((mission) => {
+            const unlocked = isMissionUnlocked(mission, visibleCompleted);
+            const done = visibleCompleted.includes(mission.id);
+            return (
+              <MissionCard
+                key={mission.id}
+                mission={mission}
+                unlocked={unlocked}
+                completed={done}
+                bossReady={bossReady}
+              />
+            );
+          })}
         </div>
 
-        {/* View all button */}
         <div className="text-center mt-8">
-          <button
-            className="px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest transition-all duration-200 active:scale-95 focus:outline-none"
+          <Link
+            href="/world"
+            className="inline-block px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest transition-all duration-200 active:scale-95"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.4)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,245,255,0.06)",
+              color: "#00f5ff",
+              border: "1px solid rgba(0,245,255,0.25)",
             }}
           >
-            VIEW ALL MISSIONS →
-          </button>
+            VIEW ALL {totalMissions} MISSIONS →
+          </Link>
         </div>
       </div>
     </section>

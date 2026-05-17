@@ -1,4 +1,4 @@
-import type { Mission, World } from "./types";
+import type { Mission, World, WorldId } from "./types";
 
 // ─── Worlds ──────────────────────────────────────────────────────────────────
 
@@ -156,4 +156,25 @@ export function isMissionUnlocked(
     (m) => m.worldId === mission.worldId && m.order < mission.order
   );
   return earlier.every((m) => completed.includes(m.id));
+}
+
+/**
+ * A world is unlocked when EITHER the player has reached its `unlockLevel`,
+ * OR they've defeated the boss of the previous world (the "skip ahead" path
+ * that closes the World 1 progression loop). World 1 is always unlocked.
+ */
+const PREV_WORLD_BOSS: Partial<Record<WorldId, string>> = {
+  "machine-mind": "boss-chatbot",
+  // Future: "deep-network": "boss-machine-mind",
+};
+
+export function isWorldUnlocked(
+  world: World,
+  playerLevel: number,
+  completed: string[]
+): boolean {
+  if (playerLevel >= world.unlockLevel) return true;
+  const requiredBoss = PREV_WORLD_BOSS[world.id];
+  if (requiredBoss && completed.includes(requiredBoss)) return true;
+  return false;
 }
