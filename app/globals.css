@@ -1,44 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-  font-family: 'Orbitron', sans-serif;
-  background: linear-gradient(135deg, #1a1a2e, #0d0d20);
-  color: #e0e0e0;
-  margin: 0;
-  padding: 0;
+  background: linear-gradient(
+    to bottom,
+    #ffffff,
+    #f3f4f6
+  );
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  backdrop-filter: blur(15px);
-  box-shadow: 0 4px 30px rgba(255, 255, 255, 0.3);
-}
-
-.neon-button {
-  background-color: #007aff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 12px 24px;
-  transition: all 0.3s ease-in-out;
-  cursor: pointer;
-  display: inline-block;
-}
-
-.neon-button:hover {
-  background-color: #005bb5;
-  box-shadow: 0 0 20px #007aff, 0 0 30px #007aff, 0 0 40px #007aff;
-  transform: scale(1.05);
-}
-
-.glowing-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 0 30px rgba(0, 122, 255, 0.5);
-  transition: all 0.3s ease;
-}
-
-.glowing-card:hover {
-  box-shadow: 0 0 50px rgba(0, 122, 255, 1);
-  transform: scale(1.05);
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(
+      to bottom,
+      #000000,
+      #1f2937
+    );
+  }
 }
