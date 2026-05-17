@@ -286,3 +286,146 @@ Polish later.
 
 Every new feature should answer:
 “Does this make the game more fun?”
+
+## Updated Gameplay Philosophy
+
+NEURAL QUEST is no longer just an educational platform.
+
+The project is evolving into:
+"A live-service cyberpunk AI RPG with progression systems and emotional gameplay loops."
+
+Core Design Philosophy:
+Players should feel like:
+
+* elite AI operatives
+* futuristic heroes
+* digital agents inside a living AI network
+
+The game must prioritize:
+
+* emotional engagement
+* hero attachment
+* progression satisfaction
+* immersive cyberpunk atmosphere
+* addictive gameplay loops
+
+Learning should feel invisible.
+
+Players should feel:
+
+* powerful
+* curious
+* rewarded
+* immersed
+
+Never make gameplay feel like:
+
+* homework
+* exams
+* long educational forms
+* text-heavy lessons
+
+Mission Design Rules:
+
+* Missions are operations, not lessons
+* Every mission should create tension or excitement
+* Fast interactions are preferred over long reading
+* Reward feedback should feel satisfying
+* Every world should build toward a major boss encounter
+
+Boss Fight Philosophy:
+Boss fights are emotional climaxes.
+They should:
+
+* test player mastery
+* create tension
+* feel cinematic
+* unlock meaningful progression
+
+Hero System Priorities:
+Hero identity is critical.
+Each hero should have:
+
+* personality
+* lore
+* faction
+* visual identity
+* unique passive bonuses
+* signature abilities
+
+Live-Service Feeling:
+The world should feel alive.
+Include:
+
+* daily systems
+* dynamic AI network feeling
+* evolving progression
+* unlock anticipation
+* recurring engagement loops
+
+Development Priority Order:
+
+1. Gameplay feel
+2. Emotional engagement
+3. Progression satisfaction
+4. Hero identity
+5. Retention systems
+6. Technical complexity
+
+Important:
+Do not overfocus on backend systems early.
+Focus on building emotionally engaging gameplay loops first.
+## Player Skill Progression Philosophy
+
+NEURAL QUEST should gradually teach players how to use AI systems through gameplay progression.
+
+Beginner players should NOT start with open-ended prompt writing.
+
+Early gameplay should focus on:
+
+* multiple choice interactions
+* tap-based decisions
+* guided prompt selection
+* quick response gameplay
+
+The progression should feel like:
+"learning to become an elite AI operator."
+
+Progression Structure:
+
+Level 1-5:
+
+* Multiple choice missions
+* Guided interactions
+* Simple AI concepts
+* Fast dopamine feedback
+
+Level 5-10:
+
+* Prompt templates
+* Fill-in-the-blank systems
+* Assisted writing
+* Hybrid gameplay
+
+Level 10+:
+
+* Custom prompt writing
+* AI strategy systems
+* Advanced reasoning
+* Complex AI encounters
+
+The goal is:
+
+* build player confidence first
+* reduce intimidation
+* create addictive progression
+* gradually increase mastery
+
+Players should feel:
+"I am becoming more powerful and skilled."
+
+Never overwhelm beginners with:
+
+* large text boxes
+* essay-style gameplay
+* advanced prompting too early
