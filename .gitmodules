@@ -1,0 +1,6 @@
+# Submodules configuration
+# Please add your submodules here with proper git repository URLs
+# Example format:
+# [submodule "submodule-name"]
+#     path = path/to/submodule
+#     url = https://github.com/owner/repo.git
