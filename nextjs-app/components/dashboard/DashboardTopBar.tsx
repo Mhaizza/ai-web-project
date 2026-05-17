@@ -1,38 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useGameStore } from "@/store/gameStore";
+import { levelProgress, rankForLevel } from "@/lib/level";
+import LiveEnergyBar from "@/components/game/LiveEnergyBar";
 
-const ENERGY_MAX = 5;
-const ENERGY_CURRENT = 3;
-
-function EnergyGems({ current, max }: { current: number; max: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: max }).map((_, i) => (
-        <div
-          key={i}
-          className={`w-4 h-4 rounded-sm rotate-45 transition-all duration-300 ${
-            i < current
-              ? "bg-yellow-400 shadow-[0_0_6px_#facc15,0_0_12px_rgba(250,204,21,0.4)]"
-              : "bg-gray-700 border border-gray-600"
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function XPBar({ xp, maxXp }: { xp: number; maxXp: number }) {
-  const pct = Math.round((xp / maxXp) * 100);
+function XPBar({
+  pct,
+  intoLevel,
+  span,
+}: {
+  pct: number;
+  intoLevel: number;
+  span: number;
+}) {
   return (
     <div className="w-full">
-      <div className="flex justify-between text-xs mb-1" style={{ fontFamily: "var(--font-mono)" }}>
+      <div
+        className="flex justify-between text-xs mb-1"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         <span className="text-gray-500">XP</span>
-        <span className="text-cyan-400">{xp.toLocaleString()} / {maxXp.toLocaleString()}</span>
+        <span className="text-cyan-400">
+          {intoLevel.toLocaleString()} / {span.toLocaleString()}
+        </span>
       </div>
       <div className="h-2.5 bg-gray-800/80 rounded-full overflow-hidden border border-gray-700/50">
         <div
-          className="xp-bar-fill h-full rounded-full"
+          className="xp-bar-fill h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -43,10 +38,18 @@ function XPBar({ xp, maxXp }: { xp: number; maxXp: number }) {
 export default function DashboardTopBar() {
   const [notifOpen, setNotifOpen] = useState(false);
 
+  const xp = useGameStore((s) => s.xp);
+  const credits = useGameStore((s) => s.credits);
+  const streak = useGameStore((s) => s.streak);
+  const agentName = useGameStore((s) => s.agentName);
+  const hydrated = useGameStore((s) => s.hydrated);
+
+  const progress = levelProgress(xp);
+  const rank = rankForLevel(progress.level);
+
   return (
     <div className="glass-card border-b border-cyan-500/10 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center gap-4">
-
         {/* Left: Avatar + Player info */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="relative shrink-0">
@@ -59,7 +62,7 @@ export default function DashboardTopBar() {
                 className="text-[10px] font-black text-pink-400"
                 style={{ fontFamily: "var(--font-orbitron)" }}
               >
-                7
+                {hydrated ? progress.level : "—"}
               </span>
             </div>
           </div>
@@ -70,40 +73,36 @@ export default function DashboardTopBar() {
                 className="text-sm font-black text-white truncate"
                 style={{ fontFamily: "var(--font-orbitron)" }}
               >
-                AGENT_001
+                {agentName}
               </span>
               <span
                 className="text-xs px-2 py-0.5 rounded bg-pink-500/15 text-pink-400 border border-pink-500/30 tracking-widest shrink-0"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                HACKER
+                {hydrated ? rank : "—"}
               </span>
               <span
                 className="text-xs px-2 py-0.5 rounded bg-orange-500/15 text-orange-400 border border-orange-500/30 tracking-widest shrink-0"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                🔥 5
+                🔥 {streak}
               </span>
             </div>
             {/* XP Bar */}
             <div className="max-w-xs">
-              <XPBar xp={2450} maxXp={3000} />
+              <XPBar
+                pct={hydrated ? progress.pct : 0}
+                intoLevel={hydrated ? progress.intoLevel : 0}
+                span={hydrated ? progress.span : 1}
+              />
             </div>
           </div>
         </div>
 
         {/* Right: Energy + Stats + Notif */}
         <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-          {/* Energy */}
-          <div className="flex flex-col items-center gap-1">
-            <EnergyGems current={ENERGY_CURRENT} max={ENERGY_MAX} />
-            <span
-              className="text-xs text-gray-500 tracking-widest"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              ENERGY {ENERGY_CURRENT}/{ENERGY_MAX}
-            </span>
-          </div>
+          {/* Live energy (with regen countdown) */}
+          <LiveEnergyBar />
 
           {/* Credits */}
           <div className="text-center">
@@ -111,7 +110,7 @@ export default function DashboardTopBar() {
               className="text-base font-black text-purple-400"
               style={{ fontFamily: "var(--font-orbitron)" }}
             >
-              340
+              {hydrated ? credits.toLocaleString() : "—"}
             </div>
             <div
               className="text-xs text-gray-500 tracking-widest"

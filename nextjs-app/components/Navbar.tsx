@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { label: "HOME", href: "/" },
   { label: "HEROES", href: "/heroes" },
   { label: "DASHBOARD", href: "/dashboard" },
-  { label: "MISSIONS", href: "#" },
+  { label: "WORLD", href: "/world" },
 ];
 
 export default function Navbar() {

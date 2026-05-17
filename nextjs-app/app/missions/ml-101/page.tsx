@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useGameStore } from "@/store/gameStore";
+import { getMission } from "@/lib/missions";
 
 type Phase = "briefing" | "challenge" | "result" | "complete";
 type ChallengeState = "input" | "evaluating" | "scored";
@@ -481,6 +483,34 @@ export default function ML101MissionPage() {
   const [cIdx, setCIdx] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
   const [showReward, setShowReward] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+
+  const rewardMission = useGameStore((s) => s.rewardMission);
+  const spendEnergy = useGameStore((s) => s.spendEnergy);
+  const completed = useGameStore((s) => s.completed);
+  const hydrated = useGameStore((s) => s.hydrated);
+
+  // Spend energy once when the mission actually starts (challenge phase)
+  const [energySpent, setEnergySpent] = useState(false);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (phase !== "challenge" || energySpent) return;
+    const mission = getMission("ml-101");
+    if (!mission) {
+      setEnergySpent(true);
+      return;
+    }
+    // If already completed, free-replay — no energy cost
+    if (completed.includes("ml-101")) {
+      setEnergySpent(true);
+      return;
+    }
+    const ok = spendEnergy(mission.energyCost);
+    if (!ok) {
+      setPhase("briefing");
+    }
+    setEnergySpent(true);
+  }, [phase, energySpent, spendEnergy, completed, hydrated]);
 
   function handleNextDlg() {
     if (dlgIdx < NPC_DIALOGUE.length - 1) setDlgIdx(i => i + 1);
@@ -492,6 +522,20 @@ export default function ML101MissionPage() {
     if (cIdx < CHALLENGES.length - 1) setCIdx(i => i + 1);
     else setPhase("result");
   }
+
+  // When the reward modal opens, persist XP/credits to the game store (once)
+  useEffect(() => {
+    if (!showReward || claimed) return;
+    const mission = getMission("ml-101");
+    const credits = Math.round(totalXP * 0.2);
+    rewardMission(
+      totalXP,
+      credits,
+      "ml-101",
+      mission?.title ?? "MACHINE LEARNING 101"
+    );
+    setClaimed(true);
+  }, [showReward, claimed, totalXP, rewardMission]);
 
   return (
     <div className="min-h-screen bg-[#050510] cyber-grid">

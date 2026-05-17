@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Orbitron, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
+import RewardToast from "@/components/game/RewardToast";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -31,6 +32,7 @@ export default function RootLayout({
         className={`${orbitron.variable} ${shareTechMono.variable} antialiased`}
       >
         {children}
+        <RewardToast />
       </body>
     </html>
   );
