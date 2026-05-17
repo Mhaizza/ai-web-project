@@ -24,6 +24,15 @@ export interface TapFillStep {
 
 export type TapStep = TapMcqStep | TapFillStep;
 
+export type WritingEvalResult = { score: number; feedback: string };
+
+/** Tap-only missions — score from calibration accuracy */
+export interface FoundationMissionFlow {
+  band: "foundation";
+  briefingAccent?: string;
+  tapWarmup: TapStep[];
+}
+
 /** Hybrid: fast tap warmup → scaffolded writing (no blank-page start). */
 export interface StructuredMissionFlow {
   band: "structured";
@@ -34,6 +43,8 @@ export interface StructuredMissionFlow {
   scaffoldPlaceholder: string;
   scaffoldMinChars: number;
   chipInserts?: { icon?: string; label: string; insert: string }[];
+  /** Override heuristic scoring for the written phase */
+  evaluateWritten?: (text: string) => WritingEvalResult;
 }
 
 /** Warmup taps → deeper written response / reasoning. */
@@ -45,6 +56,10 @@ export interface MasteryMissionFlow {
   essayPlaceholder: string;
   essayMinChars: number;
   oracleTips: string[];
+  evaluateWritten?: (text: string) => WritingEvalResult;
 }
 
-export type GenericMissionFlow = StructuredMissionFlow | MasteryMissionFlow;
+export type GenericMissionFlow =
+  | FoundationMissionFlow
+  | StructuredMissionFlow
+  | MasteryMissionFlow;

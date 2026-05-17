@@ -33,7 +33,7 @@ const MISSIONS: Mission[] = [
     status: "completed",
     icon: "🧠",
     world: "WORLD 1",
-    href: "/missions/what-is-ai",
+    href: "/mission/what-is-ai",
   },
   {
     id: "m2",
@@ -47,7 +47,7 @@ const MISSIONS: Mission[] = [
     icon: "⚙️",
     world: "WORLD 1",
     progress: 60,
-    href: "/missions/ml-101",
+    href: "/mission/ml-101",
   },
   {
     id: "m3",
@@ -60,7 +60,7 @@ const MISSIONS: Mission[] = [
     status: "available",
     icon: "🔗",
     world: "WORLD 1",
-    href: "/missions/neural-network",
+    href: "/mission/neural-network",
   },
   {
     id: "m4",
@@ -73,7 +73,7 @@ const MISSIONS: Mission[] = [
     status: "available",
     icon: "✍️",
     world: "WORLD 1",
-    href: "/missions/social-post",
+    href: "/mission/social-post",
   },
   {
     id: "m5",
@@ -86,6 +86,7 @@ const MISSIONS: Mission[] = [
     status: "locked",
     icon: "👾",
     world: "WORLD 1",
+    href: "/mission/boss-chatbot",
   },
 ];
 

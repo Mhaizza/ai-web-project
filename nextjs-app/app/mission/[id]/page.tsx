@@ -63,6 +63,42 @@ const BRIEFINGS: Record<
       "พร้อมแล้วกดเริ่ม — อย่ากลัวหน้าเปล่า เราคุมจังหวะให้",
     ],
   },
+  "what-is-ai": {
+    speaker: "NEXUS",
+    mood: "🧠",
+    lines: [
+      "ด่าน WHAT IS AI — ปฏิบัติการสแกนประกาศิต",
+      "ตอบแบบแตะและเติมช่องว่างให้ครบ — ไม่เริ่มจากหน้าเปล่า",
+      "สัญญาณครบแล้วค่อยไปด่านถัดไป",
+    ],
+  },
+  "ml-101": {
+    speaker: "DR. ALGO",
+    mood: "👨‍🔬",
+    lines: [
+      "ML 101 — สแกนสัญญาณเชิง Machine Learning",
+      "รอบแรกแตะให้เร็ว รอบสองส่งรายงานสั้นในรูปแบบที่รองรับทุกระดับ",
+      "พร้อมแล้วกดเข้าสู่การสแกน",
+    ],
+  },
+  "neural-network": {
+    speaker: "SYNAPSE",
+    mood: "🔗",
+    lines: [
+      "NEURAL NETWORK BASICS — เข้าสู่เลเยอร์ดิจิทัล",
+      "ปฏิบัติการแตะครบชุดก่อนผ่านด่าน",
+      "อย่ากังวลเรื่องการบ้านยาว — ชุดนี้เน้นปฏิกิริยารวดเร็ว",
+    ],
+  },
+  "social-post": {
+    speaker: "NEXUS",
+    mood: "✍️",
+    lines: [
+      "SOCIAL AI AGENT — ลูกค้ารออยู่",
+      "เริ่มจาก literacy scan แล้วค่อยเขียน prompt เต็มรูปแบบ",
+      "ระบบจะประเมินตาม checklist เดียวกับภารกิจจริง",
+    ],
+  },
 };
 
 function getBriefing(id: string) {
@@ -229,6 +265,16 @@ function composeFeedback(
   return `[SYNC ${tapPct}%] ${essayFeedback}`;
 }
 
+function foundationResultFeedback(tapPct: number): string {
+  if (tapPct >= 90)
+    return "สแกนสมบูรณ์แบบ — พร้อมรับภารกิจถัดไป!";
+  if (tapPct >= 70)
+    return "สัญญาณแรง — พื้นฐานแน่นแล้ว";
+  if (tapPct >= 50)
+    return "ผ่านเกณฑ์ — ทบทวนข้อที่พลาดจากคำอธิบาย";
+  return "สัญญาณอ่อน — เล่นซ้ำหรืออ่านคำอธิบายความผิดให้ครบ";
+}
+
 export default function GenericMissionPage({ params }: PageProps) {
   const { id } = use(params);
   const mission = getMission(id);
@@ -313,16 +359,40 @@ export default function GenericMissionPage({ params }: PageProps) {
   }
 
   function handleTapComplete(correct: number) {
+    if (!flow) {
+      setTapCorrectCount(correct);
+      playSound("click");
+      setPhase("input");
+      return;
+    }
+
     setTapCorrectCount(correct);
     playSound("click");
-    if (flow?.band === "structured") setPhase("scaffold");
+
+    if (flow.band === "foundation") {
+      const total = flow.tapWarmup.length;
+      setPhase("evaluating");
+      setTimeout(() => {
+        const tapPct = total > 0 ? Math.round((correct / total) * 100) : 0;
+        const blended = tapPct;
+        const tier = tierFromBlended(blended);
+        const feedback = foundationResultFeedback(tapPct);
+        setResult({ score: blended, tier, feedback });
+        playSound(blended >= 50 ? "correct" : "wrong");
+        setPhase("result");
+      }, 1400);
+      return;
+    }
+
+    if (flow.band === "structured") setPhase("scaffold");
     else setPhase("input");
   }
 
   function minWritingChars(): number {
     if (!flow) return 20;
     if (flow.band === "structured") return flow.scaffoldMinChars;
-    return flow.essayMinChars;
+    if (flow.band === "mastery") return flow.essayMinChars;
+    return 20;
   }
 
   function submitWriting() {
@@ -330,23 +400,44 @@ export default function GenericMissionPage({ params }: PageProps) {
     setPhase("evaluating");
     playSound("click");
     setTimeout(() => {
-      const essay = evaluateAnswer(answer);
-      let blended = essay.score;
-      let tier = essay.tier;
-      let feedback = essay.feedback;
+      let essayScore: number;
+      let essayFeedback: string;
+
+      if (
+        flow &&
+        (flow.band === "structured" || flow.band === "mastery") &&
+        flow.evaluateWritten
+      ) {
+        const ev = flow.evaluateWritten(answer);
+        essayScore = ev.score;
+        essayFeedback = ev.feedback;
+      } else {
+        const essay = evaluateAnswer(answer);
+        essayScore = essay.score;
+        essayFeedback = essay.feedback;
+      }
+
+      let blended = essayScore;
+      let tier = tierFromBlended(essayScore);
+      let feedback = essayFeedback;
       const hadTap = Boolean(flow?.tapWarmup.length);
 
-      if (flow && hadTap) {
+      if (
+        flow &&
+        flow.band !== "foundation" &&
+        hadTap &&
+        flow.tapWarmup.length > 0
+      ) {
         const tapPct = Math.round(
           (tapCorrectCount / flow.tapWarmup.length) * 100
         );
         const w =
-          flow.band === "structured" ? STRUCTURED_TAP_WEIGHT : MASTERY_TAP_WEIGHT;
-        blended = Math.round(w * tapPct + (1 - w) * essay.score);
+          flow.band === "structured"
+            ? STRUCTURED_TAP_WEIGHT
+            : MASTERY_TAP_WEIGHT;
+        blended = Math.round(w * tapPct + (1 - w) * essayScore);
         tier = tierFromBlended(blended);
-        feedback = composeFeedback(tapPct, essay.feedback, true);
-      } else if (flow && !hadTap) {
-        tier = tierFromBlended(blended);
+        feedback = composeFeedback(tapPct, essayFeedback, true);
       }
 
       setResult({ score: blended, tier, feedback });
@@ -684,7 +775,9 @@ export default function GenericMissionPage({ params }: PageProps) {
                   // NEURAL_DEBRIEF...
                 </p>
                 <p className="text-xs text-gray-500">
-                  รวมคะแนนการสแกน + ดีบรีฟเป็นสัญญาณเดียว
+                  {flow?.band === "foundation"
+                    ? "ประมวลผลความแม่นยำของสแกนแบบแตะ..."
+                    : "รวมคะแนนการสแกน + ดีบรีฟเป็นสัญญาณเดียว"}
                 </p>
               </motion.div>
             )}

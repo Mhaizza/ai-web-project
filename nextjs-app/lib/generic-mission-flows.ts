@@ -2,9 +2,93 @@ import type {
   GenericMissionFlow,
   StructuredMissionFlow,
   MasteryMissionFlow,
+  FoundationMissionFlow,
 } from "@/lib/mission-flow-types";
+import { ML101_WARMUP, SOCIAL_POST_WARMUP } from "@/lib/mission-warmups";
+import {
+  WHAT_IS_AI_TAPS,
+  NEURAL_NETWORK_TAPS,
+  ML101_EXTENDED_TAPS,
+} from "@/lib/mission-tap-decks";
+import { evaluateSocialPostWriting } from "@/lib/mission-eval-social-post";
 
-// ─── Deep Learning — structured (tap + scaffold, not open-ended start) ────────
+// ─── World 1 — foundation tap decks ───────────────────────────────────────────
+
+const WHAT_IS_AI_FLOW: FoundationMissionFlow = {
+  band: "foundation",
+  briefingAccent: "#00f5ff",
+  tapWarmup: WHAT_IS_AI_TAPS,
+};
+
+const NEURAL_NETWORK_FLOW: FoundationMissionFlow = {
+  band: "foundation",
+  briefingAccent: "#38bdf8",
+  tapWarmup: NEURAL_NETWORK_TAPS,
+};
+
+// ─── World 1 — structured ─────────────────────────────────────────────────────
+
+const ML101_FLOW: StructuredMissionFlow = {
+  band: "structured",
+  briefingAccent: "#facc15",
+  tapWarmup: [...ML101_WARMUP, ...ML101_EXTENDED_TAPS],
+  scaffoldTitle: "// FIELD_REPORT — ML OPS",
+  scaffoldBullets: [
+    "อธิบายสั้นๆ (1–2 ประโยค): Machine Learning คืออะไร และต่างจากโปรแกรมที่เขียนกฎทุกอย่างล่วงหน้าอย่างไร",
+    "ยกตัวอย่าง Overfitting + ผลกับ model เมื่อนำไปใช้จริง",
+    "ความต่าง Supervised vs Unsupervised อย่างย่อ พร้อมตัวอย่างการใช้งานอย่างใดอย่างหนึ่ง",
+  ],
+  scaffoldPlaceholder:
+    "ตัวอย่าง: ML เรียนจากข้อมูลหา pattern — Overfitting เหมือนท่องเฉลยจำได้แม่นแต่สอบใหม่พัง — Supervised ใช้ label จำแนก spam...",
+  scaffoldMinChars: 75,
+  chipInserts: [
+    {
+      icon: "📊",
+      label: "training data",
+      insert: "training data / ข้อมูลสำหรับฝึก ",
+    },
+    {
+      icon: "🎯",
+      label: "generalize",
+      insert: "generalize ได้บนข้อมูลใหม่ ",
+    },
+    {
+      icon: "🏷️",
+      label: "labeled data",
+      insert: "labeled data / มีป้ายกำกับคำตอบ ",
+    },
+    {
+      icon: "🔍",
+      label: "clustering",
+      insert: "clustering / จัดกลุ่มโดยไม่มี label ",
+    },
+  ],
+};
+
+const SOCIAL_POST_FLOW: StructuredMissionFlow = {
+  band: "structured",
+  briefingAccent: "#f472b6",
+  tapWarmup: SOCIAL_POST_WARMUP,
+  scaffoldTitle: "// CLIENT_BRIEF — VOLT BREW ☕",
+  scaffoldBullets: [
+    "ให้ AI เขียนโพสต์ Instagram โปรโมทกาแฟเย็นรสใหม่ของ VOLT BREW",
+    "ระบุกลุ่มเป้าหมาย แพลตฟอร์ม โทน อีโมจิ hashtag และ CTA ให้ครบในคำสั่งเดียว",
+  ],
+  scaffoldPlaceholder:
+    "ตัวอย่าง: เขียน prompt ภาษาไทยสั่ง AI ให้สร้างโพสต์ IG สำหรับวัยรุ่น โทนสนุก มีอีโมจิ ☕⚡ และ hashtag พร้อม CTA กดสั่ง...",
+  scaffoldMinChars: 80,
+  chipInserts: [
+    { icon: "👥", label: "กลุ่มเป้าหมาย", insert: "สำหรับวัยรุ่น 18-25 ปี " },
+    { icon: "📱", label: "Instagram", insert: "สำหรับ Instagram " },
+    { icon: "☕", label: "อีโมจิ", insert: "ใส่อีโมจิ ☕⚡🔥 " },
+    { icon: "#️⃣", label: "Hashtag", insert: "#voltbrew #กาแฟ #coffee " },
+    { icon: "👇", label: "CTA", insert: "พร้อม CTA ให้กดสั่งซื้อ " },
+    { icon: "🎨", label: "โทน", insert: "โทนสนุกสนาน มีพลัง " },
+  ],
+  evaluateWritten: evaluateSocialPostWriting,
+};
+
+// ─── World 2 — deep learning / transformers (existing) ────────────────────────
 
 const DEEP_LEARNING_FLOW: StructuredMissionFlow = {
   band: "structured",
@@ -58,14 +142,24 @@ const DEEP_LEARNING_FLOW: StructuredMissionFlow = {
     "ตัวอย่าง: เลเยอร์หลายชั้นดึงฟีเจอร์จากหยาบไปละเอียด เช่น ภาพสินค้า → DL ช่วยจำแนกสภาพพื้นหลังได้ดีเมื่อมีข้อมูลมาก...",
   scaffoldMinChars: 45,
   chipInserts: [
-    { icon: "📚", label: "ฟีเจอร์ลำดับชั้น", insert: "ฟีเจอร์ระดับต่ำถึงสูงแบบ hierarchical " },
+    {
+      icon: "📚",
+      label: "ฟีเจอร์ลำดับชั้น",
+      insert: "ฟีเจอร์ระดับต่ำถึงสูงแบบ hierarchical ",
+    },
     { icon: "🖼", label: "ตย. ภาพ", insert: "จำแนกภาพหรือตรวจจับวัตถุ " },
-    { icon: "🎧", label: "ตย. เสียง", insert: "speech recognition / audio tagging " },
-    { icon: "📈", label: "ข้อมูลใหญ่", insert: "เมื่อมีข้อมูลมากและโครงสร้างซับซ้อน " },
+    {
+      icon: "🎧",
+      label: "ตย. เสียง",
+      insert: "speech recognition / audio tagging ",
+    },
+    {
+      icon: "📈",
+      label: "ข้อมูลใหญ่",
+      insert: "เมื่อมีข้อมูลมากและโครงสร้างซับซ้อน ",
+    },
   ],
 };
-
-// ─── Transformers — mastery-lite on generic route (tap gate → reasoning) ────
 
 const TRANSFORMERS_FLOW: MasteryMissionFlow = {
   band: "mastery",
@@ -122,10 +216,12 @@ const TRANSFORMERS_FLOW: MasteryMissionFlow = {
   ],
 };
 
-/** Missions rendered by `/mission/[id]` use these flows instead of a bare textarea. */
-export const GENERIC_MISSION_FLOWS: Partial<
-  Record<string, GenericMissionFlow>
-> = {
+/** All missions routed through `/mission/[id]` except boss (static page). */
+export const GENERIC_MISSION_FLOWS: Record<string, GenericMissionFlow> = {
+  "what-is-ai": WHAT_IS_AI_FLOW,
+  "ml-101": ML101_FLOW,
+  "neural-network": NEURAL_NETWORK_FLOW,
+  "social-post": SOCIAL_POST_FLOW,
   "deep-learning": DEEP_LEARNING_FLOW,
   transformers: TRANSFORMERS_FLOW,
 };
