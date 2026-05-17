@@ -54,6 +54,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 100, credits: 20 },
     href: "/missions/what-is-ai",
     order: 1,
+    interactionBand: "foundation",
   },
   {
     id: "ml-101",
@@ -80,6 +81,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 350, credits: 70 },
     href: "/missions/neural-network",
     order: 3,
+    interactionBand: "structured",
   },
   {
     id: "social-post",
@@ -93,6 +95,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 500, credits: 100 },
     href: "/missions/social-post",
     order: 4,
+    interactionBand: "structured",
   },
   {
     id: "boss-chatbot",
@@ -107,6 +110,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 1000, credits: 250 },
     href: "/mission/boss-chatbot",
     order: 5,
+    interactionBand: "mastery",
   },
   // ─── World 2 ── coming soon (locked until level unlock) ─────────────────
   {
@@ -121,6 +125,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 600, credits: 150 },
     href: "/mission/deep-learning",
     order: 1,
+    interactionBand: "structured",
   },
   {
     id: "transformers",
@@ -134,6 +139,7 @@ export const MISSIONS: Mission[] = [
     reward: { xp: 800, credits: 200 },
     href: "/mission/transformers",
     order: 2,
+    interactionBand: "mastery",
   },
 ];
 

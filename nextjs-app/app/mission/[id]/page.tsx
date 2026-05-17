@@ -7,12 +7,20 @@ import Navbar from "@/components/Navbar";
 import { getMission, getWorld } from "@/lib/missions";
 import { useGameStore } from "@/store/gameStore";
 import { useTypewriter, playSound } from "@/lib/game-utils";
+import { getGenericMissionFlow } from "@/lib/generic-mission-flows";
+import type { GenericMissionFlow } from "@/lib/mission-flow-types";
+import { TapMissionSteps } from "@/components/missions/TapMissionSteps";
+import { MissionCoachBanner } from "@/components/missions/MissionCoachBanner";
 
-type Phase = "briefing" | "input" | "evaluating" | "result";
+type Phase = "briefing" | "tap" | "scaffold" | "input" | "evaluating" | "result";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+/** Blend tap calibration into final writing score */
+const STRUCTURED_TAP_WEIGHT = 0.42;
+const MASTERY_TAP_WEIGHT = 0.28;
 
 const BRIEFINGS: Record<
   string,
@@ -22,9 +30,9 @@ const BRIEFINGS: Record<
     speaker: "ORACLE",
     mood: "🤖",
     lines: [
-      "ภารกิจใหม่เข้ามาในระบบ AGENT_001 ลองอ่านภารกิจให้เข้าใจก่อนรับ",
-      "เขียน prompt หรือคำตอบของคุณให้ดีที่สุด — AI จะประเมินคุณภาพแล้วให้ XP ตามผลงาน",
-      "ใช้พลังงานเพื่อเริ่มภารกิจ ถ้าทำสำเร็จคุณจะได้ XP, credits, และปลดล็อกภารกิจถัดไป",
+      "ปฏิบัติการใหม่ลงทะเบียนแล้ว AGENT_001 — อ่านบรีฟให้จบแล้วกดเริ่ม",
+      "ระบบจะสอบปฏิกิริยาแบบแตะก่อน จากนั้นจึงให้คุณเขียนดีบรีฟสั้น ๆ — ไม่มีหน้ากระดาษเปล่า",
+      "ใช้ ⚡ ตามภารกิจ — ผ่านแล้วรับ XP / credits และปลดล็อกด่านถัดไป",
     ],
   },
   "boss-chatbot": {
@@ -41,18 +49,18 @@ const BRIEFINGS: Record<
     speaker: "DR. NEURON",
     mood: "🧠",
     lines: [
-      "ยินดีต้อนรับสู่ MACHINE MIND, AGENT_001",
-      "Deep Learning ไม่ใช่แค่ Machine Learning ที่ลึกขึ้น — มันคือสถาปัตยกรรมใหม่ทั้งหมด",
-      "อธิบายให้ฉันฟัง: ทำไม Deep Network ถึงทำงานได้ดีกับข้อมูลขนาดใหญ่?",
+      "MACHINE MIND ออนไลน์ — ด่าน Deep Learning",
+      "รอบแรก: สแกนสัญญาณด้วยการแตะ (MCQ / เติมคำ) — รวดเร็ว ไม่มีการบ้านยาว",
+      "รอบสอง: เขียนดีบรีฟสั้นเชื่อมสัญญาณ — ORACLE ช่วยใส่คำกระตุ้นได้",
     ],
   },
   transformers: {
     speaker: "ATTN-9",
     mood: "🌀",
     lines: [
-      "Transformer คือสมองเบื้องหลัง LLM ทุกตัว",
-      "อธิบายแนวคิด 'Attention is All You Need' ในแบบของคุณ",
-      "ภารกิจระดับสูง — ใช้ความรู้ที่ได้สะสมมาทั้งหมด",
+      "PROTOCOL: TRANSFORMER CORE",
+      "สัญญาณเริ่มจากแคลิเบรชันแบบแตะ แล้วค่อยเข้าโหมดเหตุผลเชิงลึก",
+      "พร้อมแล้วกดเริ่ม — อย่ากลัวหน้าเปล่า เราคุมจังหวะให้",
     ],
   },
 };
@@ -68,6 +76,7 @@ function DialogBox({
   total,
   speaker,
   mood,
+  finalCta,
 }: {
   text: string;
   onNext: () => void;
@@ -75,6 +84,7 @@ function DialogBox({
   total: number;
   speaker: string;
   mood: string;
+  finalCta: string;
 }) {
   const { displayed, done, skip } = useTypewriter(text);
 
@@ -149,14 +159,14 @@ function DialogBox({
           onNext();
         }}
         disabled={!done}
-        className={`px-8 py-3 text-xs font-bold tracking-widest rounded-xl w-full sm:w-auto ${
+        className={`px-8 py-3 text-xs font-bold tracking-widest rounded-xl w-full sm:w-auto min-h-[48px] touch-manipulation ${
           done
             ? "btn-neon-cyan"
             : "border border-gray-800 text-gray-700 cursor-not-allowed"
         }`}
         style={{ fontFamily: "var(--font-orbitron)" }}
       >
-        {current < total - 1 ? "NEXT ▶" : "เริ่มภารกิจ ▶"}
+        {current < total - 1 ? "NEXT ▶" : finalCta}
       </button>
     </div>
   );
@@ -202,10 +212,31 @@ function evaluateAnswer(answer: string): {
   return { score, tier, feedback };
 }
 
+function tierFromBlended(score: number): "S" | "A" | "B" | "C" | "D" {
+  if (score >= 85) return "S";
+  if (score >= 70) return "A";
+  if (score >= 50) return "B";
+  if (score >= 30) return "C";
+  return "D";
+}
+
+function composeFeedback(
+  tapPct: number | null,
+  essayFeedback: string,
+  hadTap: boolean
+) {
+  if (!hadTap) return essayFeedback;
+  return `[SYNC ${tapPct}%] ${essayFeedback}`;
+}
+
 export default function GenericMissionPage({ params }: PageProps) {
   const { id } = use(params);
   const mission = getMission(id);
   const world = mission ? getWorld(mission.worldId) : undefined;
+  const flow: GenericMissionFlow | null = mission
+    ? getGenericMissionFlow(mission.id)
+    : null;
+  const accent = flow?.briefingAccent ?? world?.color ?? "#00f5ff";
 
   const rewardMission = useGameStore((s) => s.rewardMission);
   const spendEnergy = useGameStore((s) => s.spendEnergy);
@@ -215,6 +246,7 @@ export default function GenericMissionPage({ params }: PageProps) {
 
   const [phase, setPhase] = useState<Phase>("briefing");
   const [dlgIdx, setDlgIdx] = useState(0);
+  const [tapCorrectCount, setTapCorrectCount] = useState(0);
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<ReturnType<typeof evaluateAnswer> | null>(
     null
@@ -228,14 +260,15 @@ export default function GenericMissionPage({ params }: PageProps) {
 
   useEffect(() => {
     if (!hydrated || !mission) return;
-    if (phase !== "input") return;
+    const spendHere = flow ? phase === "tap" : phase === "input";
+    if (!spendHere) return;
     if (completed.includes(mission.id)) return;
     const ok = spendEnergy(mission.energyCost);
     if (!ok) {
       setInsufficientEnergy(true);
       setPhase("briefing");
     }
-  }, [phase, mission, spendEnergy, completed, hydrated]);
+  }, [phase, mission, spendEnergy, completed, hydrated, flow]);
 
   useEffect(() => {
     if (phase !== "result" || !result || !mission || claimed) return;
@@ -274,23 +307,69 @@ export default function GenericMissionPage({ params }: PageProps) {
     );
   }
 
-  const handleSubmit = () => {
-    if (answer.trim().length < 20) return;
+  function beginAfterBriefing() {
+    if (flow) setPhase("tap");
+    else setPhase("input");
+  }
+
+  function handleTapComplete(correct: number) {
+    setTapCorrectCount(correct);
+    playSound("click");
+    if (flow?.band === "structured") setPhase("scaffold");
+    else setPhase("input");
+  }
+
+  function minWritingChars(): number {
+    if (!flow) return 20;
+    if (flow.band === "structured") return flow.scaffoldMinChars;
+    return flow.essayMinChars;
+  }
+
+  function submitWriting() {
+    if (answer.trim().length < minWritingChars()) return;
     setPhase("evaluating");
     playSound("click");
     setTimeout(() => {
-      const r = evaluateAnswer(answer);
-      setResult(r);
+      const essay = evaluateAnswer(answer);
+      let blended = essay.score;
+      let tier = essay.tier;
+      let feedback = essay.feedback;
+      const hadTap = Boolean(flow?.tapWarmup.length);
+
+      if (flow && hadTap) {
+        const tapPct = Math.round(
+          (tapCorrectCount / flow.tapWarmup.length) * 100
+        );
+        const w =
+          flow.band === "structured" ? STRUCTURED_TAP_WEIGHT : MASTERY_TAP_WEIGHT;
+        blended = Math.round(w * tapPct + (1 - w) * essay.score);
+        tier = tierFromBlended(blended);
+        feedback = composeFeedback(tapPct, essay.feedback, true);
+      } else if (flow && !hadTap) {
+        tier = tierFromBlended(blended);
+      }
+
+      setResult({ score: blended, tier, feedback });
+      playSound(blended >= 50 ? "correct" : "wrong");
       setPhase("result");
-    }, 1600);
-  };
+    }, 1400);
+  }
+
+  const writingReady = answer.trim().length >= minWritingChars();
+  const bandLabel =
+    mission.interactionBand === "foundation"
+      ? "FOUNDATION"
+      : mission.interactionBand === "structured"
+      ? "STRUCTURED"
+      : mission.interactionBand === "mastery"
+      ? "MASTERY"
+      : "STANDARD";
 
   return (
     <div className="min-h-screen bg-[#050510] cyber-grid">
       <Navbar />
 
       <div className="pt-20 pb-12 px-4">
-        {/* Mission header card */}
         <div className="max-w-lg mx-auto mb-6">
           <div className="glass-card rounded-2xl p-4 border border-cyan-500/15">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -313,14 +392,25 @@ export default function GenericMissionPage({ params }: PageProps) {
                   </p>
                 </div>
               </div>
-              <div
-                className="flex items-center gap-3 text-xs"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                <span className="text-yellow-400">⚡ {mission.reward.xp} XP</span>
-                <span className="text-purple-400">
-                  💎 {mission.reward.credits}
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className="text-[10px] tracking-[0.2em] px-2 py-0.5 rounded border text-gray-400"
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    borderColor: `${accent}44`,
+                  }}
+                >
+                  {bandLabel}
                 </span>
+                <div
+                  className="flex items-center gap-3 text-xs"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  <span className="text-yellow-400">⚡ {mission.reward.xp} XP</span>
+                  <span className="text-purple-400">
+                    💎 {mission.reward.credits}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -328,7 +418,6 @@ export default function GenericMissionPage({ params }: PageProps) {
 
         <div className="flex flex-col items-center">
           <AnimatePresence mode="wait">
-            {/* ─── Briefing ── */}
             {phase === "briefing" && (
               <motion.div
                 key="briefing"
@@ -344,13 +433,14 @@ export default function GenericMissionPage({ params }: PageProps) {
                     if (dlgIdx < briefing.lines.length - 1) {
                       setDlgIdx((i) => i + 1);
                     } else {
-                      setPhase("input");
+                      beginAfterBriefing();
                     }
                   }}
                   current={dlgIdx}
                   total={briefing.lines.length}
                   speaker={briefing.speaker}
                   mood={briefing.mood}
+                  finalCta={flow ? "▶ เข้าสู่การสแกน" : "▶ เริ่มภารกิจ"}
                 />
 
                 {insufficientEnergy && (
@@ -377,7 +467,126 @@ export default function GenericMissionPage({ params }: PageProps) {
               </motion.div>
             )}
 
-            {/* ─── Input ── */}
+            {phase === "tap" && flow && (
+              <motion.div
+                key="tap"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                className="w-full"
+              >
+                <p
+                  className="text-center text-xs tracking-[0.35em] mb-4 font-bold"
+                  style={{ fontFamily: "var(--font-mono)", color: accent }}
+                >
+                  // TAP_CALIBRATION
+                </p>
+                <TapMissionSteps
+                  steps={flow.tapWarmup}
+                  accentColor={accent}
+                  onComplete={handleTapComplete}
+                />
+              </motion.div>
+            )}
+
+            {phase === "scaffold" && flow && flow.band === "structured" && (
+              <motion.div
+                key="scaffold"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                className="w-full max-w-lg mx-auto space-y-4"
+              >
+                <MissionCoachBanner
+                  tips={[
+                    ...flow.scaffoldBullets,
+                    "กดชิปด้านล่างเพื่อแทรกคำศัพท์ — แล้วแก้ให้เป็นประโยคของคุณ",
+                  ]}
+                  accent={accent}
+                />
+
+                <div
+                  className="glass-card rounded-2xl p-5 border space-y-3"
+                  style={{ borderColor: `${accent}33` }}
+                >
+                  <p
+                    className="text-xs font-bold tracking-widest"
+                    style={{ fontFamily: "var(--font-mono)", color: accent }}
+                  >
+                    {flow.scaffoldTitle}
+                  </p>
+                  <p className="text-base text-white leading-relaxed">
+                    {mission.description}
+                  </p>
+                  <ul className="text-sm text-gray-400 space-y-1.5 list-disc pl-4">
+                    {flow.scaffoldBullets.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {flow.chipInserts && flow.chipInserts.length > 0 && (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {flow.chipInserts.map((c) => (
+                      <button
+                        key={c.label}
+                        type="button"
+                        onClick={() => {
+                          playSound("click");
+                          setAnswer((a) =>
+                            a ? `${a.trimEnd()} ${c.insert}` : c.insert
+                          );
+                        }}
+                        className="px-4 py-2.5 rounded-xl border border-gray-700 text-sm font-bold text-gray-200 bg-black/30 hover:border-cyan-500/45 min-h-[48px] touch-manipulation"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        {c.icon ? `${c.icon} ` : ""}
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  rows={7}
+                  placeholder={flow.scaffoldPlaceholder}
+                  className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-700 resize-none outline-none focus:border-cyan-500/50 transition-colors touch-manipulation"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                />
+                <div
+                  className="flex items-center justify-between text-xs"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  <span className="text-gray-500">
+                    {answer.trim().length} / {flow.scaffoldMinChars}+ ตัวอักษร
+                  </span>
+                  <span
+                    className={
+                      writingReady ? "text-green-400" : "text-gray-600"
+                    }
+                  >
+                    {writingReady ? "✓ READY" : "● COMPOSING..."}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={submitWriting}
+                  disabled={!writingReady}
+                  className={`w-full py-4 text-xs font-bold tracking-widest rounded-xl transition-all min-h-[52px] touch-manipulation ${
+                    writingReady
+                      ? "btn-neon-pink"
+                      : "border border-gray-800 text-gray-700 cursor-not-allowed"
+                  }`}
+                  style={{ fontFamily: "var(--font-orbitron)" }}
+                >
+                  ▶ ส่งดีบรีฟปฏิบัติการ
+                </button>
+              </motion.div>
+            )}
+
             {phase === "input" && (
               <motion.div
                 key="input"
@@ -387,6 +596,13 @@ export default function GenericMissionPage({ params }: PageProps) {
                 transition={{ duration: 0.3 }}
                 className="w-full max-w-lg mx-auto space-y-4"
               >
+                {flow && flow.band === "mastery" && (
+                  <MissionCoachBanner
+                    tips={flow.oracleTips}
+                    accent={accent}
+                  />
+                )}
+
                 <div className="glass-card rounded-2xl p-5 border border-cyan-500/25">
                   <p
                     className="text-xs text-cyan-400 tracking-widest mb-3"
@@ -395,14 +611,19 @@ export default function GenericMissionPage({ params }: PageProps) {
                     // MISSION_OBJECTIVE
                   </p>
                   <p className="text-base text-white leading-relaxed mb-4">
-                    {mission.description}
+                    {!flow && mission.description}
+                    {flow && flow.band === "mastery" && flow.essayPrompt}
                   </p>
                   <textarea
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    rows={8}
-                    placeholder="เขียนคำตอบของคุณที่นี่... อธิบายให้ละเอียด ยกตัวอย่าง และเชื่อมโยงกับสิ่งที่คุณรู้"
-                    className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-700 resize-none outline-none focus:border-cyan-500/50 transition-colors"
+                    rows={flow?.band === "mastery" ? 10 : 8}
+                    placeholder={
+                      flow && flow.band === "mastery"
+                        ? flow.essayPlaceholder
+                        : "เขียนคำตอบของคุณที่นี่... อธิบายให้ละเอียด ยกตัวอย่าง และเชื่อมโยงกับสิ่งที่คุณรู้"
+                    }
+                    className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-700 resize-none outline-none focus:border-cyan-500/50 transition-colors touch-manipulation"
                     style={{ fontFamily: "var(--font-mono)" }}
                   />
                   <div
@@ -410,36 +631,35 @@ export default function GenericMissionPage({ params }: PageProps) {
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
                     <span className="text-gray-500">
-                      {answer.trim().length} ตัวอักษร (ต้องการ 20+)
+                      {answer.trim().length} ตัวอักษร (
+                      {flow ? minWritingChars() : 20}+)
                     </span>
                     <span
                       className={
-                        answer.trim().length >= 20
-                          ? "text-green-400"
-                          : "text-gray-600"
+                        writingReady ? "text-green-400" : "text-gray-600"
                       }
                     >
-                      {answer.trim().length >= 20 ? "✓ READY" : "● TYPING..."}
+                      {writingReady ? "✓ READY" : "● TYPING..."}
                     </span>
                   </div>
                 </div>
 
                 <button
-                  onClick={handleSubmit}
-                  disabled={answer.trim().length < 20}
-                  className={`w-full py-4 text-xs font-bold tracking-widest rounded-xl transition-all ${
-                    answer.trim().length >= 20
+                  type="button"
+                  onClick={submitWriting}
+                  disabled={!writingReady}
+                  className={`w-full py-4 text-xs font-bold tracking-widest rounded-xl transition-all min-h-[52px] touch-manipulation ${
+                    writingReady
                       ? "btn-neon-pink"
                       : "border border-gray-800 text-gray-700 cursor-not-allowed"
                   }`}
                   style={{ fontFamily: "var(--font-orbitron)" }}
                 >
-                  ▶ ส่งให้ AI ประเมิน
+                  ▶ ส่งให้ระบบประเมิน
                 </button>
               </motion.div>
             )}
 
-            {/* ─── Evaluating ── */}
             {phase === "evaluating" && (
               <motion.div
                 key="evaluating"
@@ -461,15 +681,14 @@ export default function GenericMissionPage({ params }: PageProps) {
                   className="text-sm text-cyan-400 tracking-widest"
                   style={{ fontFamily: "var(--font-mono)" }}
                 >
-                  // AI_NEURAL_ANALYSIS...
+                  // NEURAL_DEBRIEF...
                 </p>
                 <p className="text-xs text-gray-500">
-                  ระบบกำลังประเมินคำตอบของคุณ
+                  รวมคะแนนการสแกน + ดีบรีฟเป็นสัญญาณเดียว
                 </p>
               </motion.div>
             )}
 
-            {/* ─── Result ── */}
             {phase === "result" && result && (
               <motion.div
                 key="result"
@@ -552,14 +771,14 @@ export default function GenericMissionPage({ params }: PageProps) {
                 <div className="flex flex-col gap-3">
                   <Link
                     href="/world"
-                    className="btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center"
+                    className="btn-neon-cyan py-3 text-xs font-bold tracking-widest rounded-xl text-center min-h-[48px] flex items-center justify-center touch-manipulation"
                     style={{ fontFamily: "var(--font-orbitron)" }}
                   >
                     🗺 WORLD MAP
                   </Link>
                   <Link
                     href="/dashboard"
-                    className="btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center"
+                    className="btn-neon-pink py-3 text-xs font-bold tracking-widest rounded-xl text-center min-h-[48px] flex items-center justify-center touch-manipulation"
                     style={{ fontFamily: "var(--font-orbitron)" }}
                   >
                     📊 DASHBOARD

@@ -3,7 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 
 // ─── Sound System (Web Audio API) ────────────────────────────────────────────
-export function playSound(type: "click" | "correct" | "wrong" | "complete" | "levelup") {
+export function playSound(
+  type:
+    | "click"
+    | "correct"
+    | "wrong"
+    | "complete"
+    | "levelup"
+    | "phaseTransition"
+    | "criticalHit"
+) {
   try {
     type AudioContextType = typeof AudioContext;
     const Ctx: AudioContextType =
@@ -52,6 +61,17 @@ export function playSound(type: "click" | "correct" | "wrong" | "complete" | "le
         [392, 523, 659, 784, 1047].forEach((f, i) =>
           tone(f, "sine", 0.22, 0.3, i * 0.08)
         );
+        break;
+      case "phaseTransition":
+        tone(220, "triangle", 0.12, 0.11);
+        tone(330, "sine", 0.18, 0.16, 0.06);
+        tone(440, "sine", 0.24, 0.18, 0.14);
+        tone(554, "sine", 0.32, 0.17, 0.22);
+        break;
+      case "criticalHit":
+        tone(1319, "square", 0.045, 0.14);
+        tone(1568, "sine", 0.12, 0.22, 0.04);
+        tone(2093, "sine", 0.16, 0.18, 0.08);
         break;
     }
   } catch {

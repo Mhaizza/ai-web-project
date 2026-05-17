@@ -374,6 +374,51 @@ export function resolveRound(
 
 export type BattleOutcome = "victory" | "defeat";
 
+/** Persisted summary for profile / battle history */
+export interface BossBattleRoundSnapshot {
+  phaseId: BossPhaseId;
+  score: number;
+  tier: RoundResult["tier"];
+  bossDamage: number;
+  playerDamage: number;
+  countered: boolean;
+  crit: boolean;
+}
+
+export interface BossBattleLogEntry {
+  id: number;
+  missionId: string;
+  missionTitle: string;
+  outcome: BattleOutcome;
+  endedAt: number;
+  rounds: BossBattleRoundSnapshot[];
+  avgScore: number;
+}
+
+export function buildBossBattleLogPayload(
+  missionId: string,
+  missionTitle: string,
+  state: BattleState,
+  outcome: BattleOutcome
+): Omit<BossBattleLogEntry, "id"> {
+  return {
+    missionId,
+    missionTitle,
+    outcome,
+    endedAt: Date.now(),
+    avgScore: averageRoundScore(state),
+    rounds: state.rounds.map((r) => ({
+      phaseId: r.phase.id,
+      score: r.score,
+      tier: r.tier,
+      bossDamage: r.bossDamage,
+      playerDamage: r.playerDamage,
+      countered: r.countered,
+      crit: r.crit,
+    })),
+  };
+}
+
 export function battleOutcome(state: BattleState): BattleOutcome | null {
   if (state.playerStability <= 0) return "defeat";
   if (state.bossHp <= 0) return "victory";

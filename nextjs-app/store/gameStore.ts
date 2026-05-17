@@ -9,6 +9,7 @@ import {
   ENERGY_REGEN_MS,
   levelForXp,
 } from "@/lib/level";
+import type { BossBattleLogEntry } from "@/lib/boss-fight";
 
 export interface RewardEvent {
   id: number;
@@ -44,6 +45,9 @@ interface GameStore extends PlayerState {
   markCompleted: (missionId: string) => void;
   /** Hard reset (for dev / start-over button) */
   resetProgress: () => void;
+  /** Boss fight history for profile / recap */
+  battleLogs: BossBattleLogEntry[];
+  pushBossBattleLog: (payload: Omit<BossBattleLogEntry, "id">) => void;
   /** Internal: invoked after rehydrate */
   _setHydrated: () => void;
 }
@@ -66,7 +70,14 @@ export const useGameStore = create<GameStore>()(
       ...INITIAL_PLAYER,
       hydrated: false,
       lastReward: null,
+      battleLogs: [],
       clearLastReward: () => set({ lastReward: null }),
+
+      pushBossBattleLog: (payload) => {
+        const entry: BossBattleLogEntry = { ...payload, id: Date.now() };
+        const next = [entry, ...get().battleLogs].slice(0, 40);
+        set({ battleLogs: next });
+      },
 
       refreshEnergy: () => {
         const s = get();
@@ -134,6 +145,7 @@ export const useGameStore = create<GameStore>()(
           ...INITIAL_PLAYER,
           lastEnergyAt: Date.now(),
           lastReward: null,
+          battleLogs: [],
         });
       },
 
@@ -152,6 +164,7 @@ export const useGameStore = create<GameStore>()(
         streak: s.streak,
         heroKey: s.heroKey,
         agentName: s.agentName,
+        battleLogs: s.battleLogs,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -163,6 +176,7 @@ export const useGameStore = create<GameStore>()(
           state.lastEnergyAt = lastEnergyAt;
           state.level = levelForXp(state.xp);
           state.hydrated = true;
+          if (!state.battleLogs) state.battleLogs = [];
         }
       },
     }

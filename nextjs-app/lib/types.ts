@@ -3,6 +3,12 @@
 export type MissionDifficulty = "EASY" | "MEDIUM" | "HARD" | "BOSS";
 export type MissionStatus = "available" | "in_progress" | "locked" | "completed";
 
+/** Progressive interaction design — maps to onboarding vs scaffold vs mastery writing */
+export type MissionInteractionBand =
+  | "foundation"
+  | "structured"
+  | "mastery";
+
 export type WorldId = "ai-origins" | "machine-mind" | "deep-network";
 
 export interface MissionReward {
@@ -24,6 +30,8 @@ export interface Mission {
   href: string;
   /** order within the world for unlock chain */
   order: number;
+  /** How the mission teaches AI literacy (tap-first vs scaffold vs deep writing). Defaults to mastery on older missions. */
+  interactionBand?: MissionInteractionBand;
 }
 
 export interface World {

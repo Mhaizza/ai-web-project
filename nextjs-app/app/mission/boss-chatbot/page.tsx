@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { useGameStore } from "@/store/gameStore";
 import { getMission, getWorld } from "@/lib/missions";
-import { useTypewriter, playSound } from "@/lib/game-utils";
+import {
+  useTypewriter,
+  playSound,
+  XPFloaters,
+  type Floater,
+} from "@/lib/game-utils";
 import {
   BOSS_NAME,
   BOSS_MAX_HP,
@@ -17,10 +28,13 @@ import {
   battleOutcome,
   computeBossRewards,
   averageRoundScore,
+  buildBossBattleLogPayload,
   type BattleState,
   type BossPhase,
   type RoundResult,
 } from "@/lib/boss-fight";
+
+const PHASE_CLEAR_STABILITY = 5;
 
 // ─── Phase machine ───────────────────────────────────────────────────────────
 
@@ -185,6 +199,10 @@ function PhaseIntro({
 }) {
   const { displayed, done, skip } = useTypewriter(phase.intro, 26);
 
+  useEffect(() => {
+    playSound("phaseTransition");
+  }, [phase.id]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -260,6 +278,7 @@ function BattleScreen({
   onSubmit,
   shake,
   pulse,
+  bossFloaterAnchorRef,
 }: {
   phase: BossPhase;
   bossHp: number;
@@ -267,6 +286,7 @@ function BattleScreen({
   shake: number;
   pulse: number;
   onSubmit: (prompt: string) => void;
+  bossFloaterAnchorRef: RefObject<HTMLDivElement | null>;
 }) {
   const [prompt, setPrompt] = useState("");
   const ready = prompt.trim().length >= phase.minChars;
@@ -279,8 +299,8 @@ function BattleScreen({
       transition={{ duration: 0.3 }}
       className="w-full max-w-lg mx-auto space-y-5"
     >
-      {/* Boss panel */}
-      <div className="space-y-4">
+      {/* Boss panel — anchor for damage floaters (viewport-fixed CSS) */}
+      <div ref={bossFloaterAnchorRef} className="space-y-4">
         <BossAvatar phase={phase} hp={bossHp} pulse={pulse} />
         <BossHealthBar hp={bossHp} phase={phase} shake={shake} />
       </div>
@@ -846,6 +866,7 @@ export default function BossChatbotPage() {
 
   const rewardMission = useGameStore((s) => s.rewardMission);
   const spendEnergy = useGameStore((s) => s.spendEnergy);
+  const pushBossBattleLog = useGameStore((s) => s.pushBossBattleLog);
   const energy = useGameStore((s) => s.energy);
   const completed = useGameStore((s) => s.completed);
   const hydrated = useGameStore((s) => s.hydrated);
@@ -858,6 +879,9 @@ export default function BossChatbotPage() {
   const [insufficientEnergy, setInsufficientEnergy] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
   const claimedRef = useRef(false);
+  const bossFloaterAnchorRef = useRef<HTMLDivElement>(null);
+  const damageFloaterIdRef = useRef(0);
+  const [damageFloaters, setDamageFloaters] = useState<Floater[]>([]);
 
   // Spend energy once when entering battle (not on retry of an already-paid attempt)
   const energyChargedRef = useRef(false);
@@ -914,6 +938,8 @@ export default function BossChatbotPage() {
     );
   }
 
+  const bossMission = mission;
+
   const phase = BOSS_PHASES[Math.min(battle.currentPhaseIdx, BOSS_PHASES.length - 1)];
 
   function handleStartIntro() {
@@ -925,17 +951,48 @@ export default function BossChatbotPage() {
   }
 
   function handleSubmitPrompt(prompt: string) {
+    let anchor = {
+      x:
+        typeof window !== "undefined"
+          ? Math.round(window.innerWidth / 2) - 28
+          : 0,
+      y: 168,
+    };
+    const el = bossFloaterAnchorRef.current;
+    if (typeof window !== "undefined" && el) {
+      const rect = el.getBoundingClientRect();
+      anchor = {
+        x: Math.round(rect.left + rect.width / 2) - 28,
+        y: Math.round(rect.top + rect.height * 0.22),
+      };
+    }
+
     setStage("resolving");
     playSound("click");
 
-    // Brief "analyzing" delay for game feel
     setTimeout(() => {
       const { state: nextState, result } = resolveRound(prompt, battle);
       setBattle(nextState);
       setLastResult(result);
       setShake((s) => s + 1);
       setPulse((p) => p + 1);
-      playSound(result.countered ? "wrong" : "correct");
+      const fid = ++damageFloaterIdRef.current;
+      setDamageFloaters((prev) => [
+        ...prev,
+        {
+          id: fid,
+          value: `-${result.bossDamage}`,
+          color: result.phase.color,
+          x: anchor.x,
+          y: anchor.y,
+        },
+      ]);
+      window.setTimeout(() => {
+        setDamageFloaters((prev) => prev.filter((f) => f.id !== fid));
+      }, 1180);
+      if (result.countered) playSound("wrong");
+      else if (result.crit) playSound("criticalHit");
+      else playSound("correct");
       setStage("round-result");
     }, 1400);
   }
@@ -943,14 +1000,36 @@ export default function BossChatbotPage() {
   function handleContinueAfterResult() {
     const outcome = battleOutcome(battle);
     if (outcome === "victory") {
+      pushBossBattleLog(
+        buildBossBattleLogPayload(
+          bossMission.id,
+          bossMission.title,
+          battle,
+          "victory"
+        )
+      );
       setStage("victory");
       return;
     }
     if (outcome === "defeat") {
+      pushBossBattleLog(
+        buildBossBattleLogPayload(
+          bossMission.id,
+          bossMission.title,
+          battle,
+          "defeat"
+        )
+      );
       setStage("defeat");
       return;
     }
-    // More phases remain
+    setBattle((b) => ({
+      ...b,
+      playerStability: Math.min(
+        PLAYER_MAX_STABILITY,
+        b.playerStability + PHASE_CLEAR_STABILITY
+      ),
+    }));
     setStage("phase-intro");
   }
 
@@ -966,6 +1045,7 @@ export default function BossChatbotPage() {
     setRetryAttempts((n) => n + 1);
     setBattle(initialBattleState());
     setLastResult(null);
+    setDamageFloaters([]);
     setStage("phase-intro");
   }
 
@@ -1080,6 +1160,7 @@ export default function BossChatbotPage() {
                   stability={battle.playerStability}
                   shake={shake}
                   pulse={pulse}
+                  bossFloaterAnchorRef={bossFloaterAnchorRef}
                   onSubmit={handleSubmitPrompt}
                 />
               </motion.div>
@@ -1154,6 +1235,8 @@ export default function BossChatbotPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      <XPFloaters floaters={damageFloaters} />
     </div>
   );
 }
