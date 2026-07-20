@@ -286,3 +286,23 @@ Polish later.
 
 Every new feature should answer:
 “Does this make the game more fun?”
+
+---
+
+## Cursor Cloud specific instructions
+
+### Layout: two independent npm apps
+This repo contains two separate, standalone Next.js 16 / React 19 apps (each with its own `package.json` + `package-lock.json`), not a workspace/monorepo:
+
+* `nextjs-app/` — **NeuralQuest** (the primary product): a mobile-first cyberpunk AI-hero RPG. Gameplay/missions/XP are fully client-side; no backend, DB, or env vars required.
+* repo root (`app/`) — a simpler "Futuristic AI Startup" marketing landing page.
+
+Ignore the committed `OneDrive/Desktop/ai-web-project/NeuralQuest/` tree — it is a stale duplicate snapshot, not a maintained product.
+
+### Running the apps (dev)
+Standard scripts live in each `package.json` (`dev`/`build`/`start`/`lint`). Both apps default to port 3000, so to run both at once give one a different port, e.g. run NeuralQuest with `npm run dev` in `nextjs-app/` and the root landing with `PORT=3001 npm run dev` at the repo root.
+
+### Non-obvious gotchas
+* Root `npm run lint` is broken: its script is `next lint`, which was removed in Next 16 (`next lint` fails with "Invalid project directory"). Lint the root app with `npx eslint .` instead. `nextjs-app` uses `eslint` directly and its lint works (it currently reports pre-existing code-quality errors — not an env problem).
+* Root `npm run build` fails type-checking because the root `tsconfig.json` `include`s the stale `OneDrive/.../NeuralQuest/` copy (whose `@/*` imports don't resolve at root). This is a pre-existing repo issue; the root **dev server still runs fine**. `nextjs-app` builds cleanly.
+* No tests are configured (no `npm test`). Verification = lint + build + manual browser play of a mission (e.g. `/missions/what-is-ai`).
